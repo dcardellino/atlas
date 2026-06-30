@@ -13,6 +13,11 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
+      // `server-only` is a Next build-time guard with no runtime module; stub it
+      // out so server modules can be unit-tested under Vitest.
+      "server-only": fileURLToPath(
+        new URL("./src/test/empty-module.ts", import.meta.url),
+      ),
     },
   },
 });
