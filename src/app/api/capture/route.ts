@@ -1,13 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { formatInTimeZone } from "date-fns-tz";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { bearerFromHeader, resolveToken } from "@/lib/auth/token";
 import { CaptureInputSchema } from "@/lib/schemas/capture";
-import {
-  classify,
-  CLASSIFY_MODEL,
-  type AreaContext,
-} from "@/lib/ai/classify";
+import { classify, CLASSIFY_MODEL, type AreaContext } from "@/lib/ai/classify";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
@@ -34,10 +31,31 @@ const RATE_WINDOW_MS = 60_000;
 const hits = new Map<string, number[]>();
 
 function rateLimited(userId: string, now: number): boolean {
-  const recent = (hits.get(userId) ?? []).filter((t) => now - t < RATE_WINDOW_MS);
+  const recent = (hits.get(userId) ?? []).filter(
+    (t) => now - t < RATE_WINDOW_MS,
+  );
   recent.push(now);
   hits.set(userId, recent);
   return recent.length > RATE_LIMIT;
+}
+
+const CAPTURE_TZ = process.env.CAPTURE_TZ ?? "Europe/Berlin";
+
+/**
+ * Derive a routine's time-of-day grouping and specific time from a captured
+ * due time, if any. Routines usually carry no time → "anytime" (TASK-035).
+ */
+function routineTiming(dueAt: string | null | undefined): {
+  time_of_day: "morning" | "afternoon" | "evening" | "anytime";
+  specific_time: string | null;
+} {
+  if (!dueAt) return { time_of_day: "anytime", specific_time: null };
+  const date = new Date(dueAt);
+  const hour = Number(formatInTimeZone(date, CAPTURE_TZ, "H"));
+  const specific_time = formatInTimeZone(date, CAPTURE_TZ, "HH:mm:ss");
+  const time_of_day =
+    hour < 12 ? "morning" : hour < 17 ? "afternoon" : "evening";
+  return { time_of_day, specific_time };
 }
 
 async function authenticate(request: NextRequest): Promise<Auth | null> {
@@ -145,13 +163,11 @@ export async function POST(request: NextRequest) {
     : undefined;
   const areaId = areaRow?.id ?? null;
 
-  // 4. Create the target entry. Phase 1 handles task/note/journal; routines get
-  // their own path in Phase 2 (TASK-035) — until then a routine is filed as a task.
+  // 4. Create the target entry. task → tasks, routine → routines (TASK-035),
+  // journal → journal_entries; 'note' stays as the inbox item itself.
   let createdId = inbox.id;
-  const effectiveType =
-    classification.type === "routine" ? "task" : classification.type;
 
-  if (effectiveType === "task") {
+  if (classification.type === "task") {
     const { data: task } = await db
       .from("tasks")
       .insert({
@@ -164,7 +180,23 @@ export async function POST(request: NextRequest) {
       .select("id")
       .single();
     if (task) createdId = task.id;
-  } else if (effectiveType === "journal") {
+  } else if (classification.type === "routine") {
+    // `routines` has no source_inbox_id; the inbox item's classified_into below
+    // preserves the link back to this routine.
+    const { time_of_day, specific_time } = routineTiming(classification.due_at);
+    const { data: routine } = await db
+      .from("routines")
+      .insert({
+        user_id: userId,
+        area_id: areaId,
+        name: classification.title,
+        time_of_day,
+        specific_time,
+      })
+      .select("id")
+      .single();
+    if (routine) createdId = routine.id;
+  } else if (classification.type === "journal") {
     const { data: entry } = await db
       .from("journal_entries")
       .insert({

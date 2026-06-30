@@ -3,6 +3,9 @@
 import { useTransition } from "react";
 import { formatInTimeZone } from "date-fns-tz";
 import { toggleComplete, setTop3, type Task } from "@/lib/tasks/actions";
+import { logToday, unlogToday } from "@/lib/routines/actions";
+import type { RoutineState } from "@/lib/routines/types";
+import { StreakIndicator } from "@/components/features/routines/StreakChart";
 import type { TodaySummary, RecentInboxItem } from "@/lib/today/summary";
 
 /**
@@ -56,7 +59,46 @@ function TaskRow({ task }: { task: Task }) {
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function RoutineRow({ state }: { state: RoutineState }) {
+  const [pending, startTransition] = useTransition();
+  const { routine, loggedToday, streak } = state;
+  return (
+    <li className="flex items-center gap-3 border-b border-border py-3">
+      <button
+        type="button"
+        aria-label={loggedToday ? "Abhaken rückgängig" : "Heute abhaken"}
+        aria-pressed={loggedToday}
+        disabled={pending}
+        onClick={() =>
+          startTransition(() =>
+            loggedToday ? unlogToday(routine.id) : logToday(routine.id),
+          )
+        }
+        className={`h-[18px] w-[18px] shrink-0 rounded-sm border border-border ${
+          loggedToday ? "bg-on-surface text-surface" : "bg-surface"
+        }`}
+      >
+        {loggedToday ? "✓" : ""}
+      </button>
+      <span
+        className={`flex-1 text-body ${
+          loggedToday ? "text-on-surface-muted" : "text-on-surface"
+        }`}
+      >
+        {routine.name}
+      </span>
+      <StreakIndicator streak={streak} />
+    </li>
+  );
+}
+
+function Section({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
     <section className="mt-8">
       <Eyebrow>{title}</Eyebrow>
@@ -103,7 +145,8 @@ export default function TodayView({
   const isEmpty =
     data.top3.length === 0 &&
     data.dueToday.length === 0 &&
-    data.recentInbox.length === 0;
+    data.recentInbox.length === 0 &&
+    data.routines.length === 0;
 
   return (
     <section>
@@ -127,6 +170,13 @@ export default function TodayView({
             <Section title="Heute fällig">
               {data.dueToday.map((t) => (
                 <TaskRow key={t.id} task={t} />
+              ))}
+            </Section>
+          )}
+          {data.routines.length > 0 && (
+            <Section title="Routinen">
+              {data.routines.map((r) => (
+                <RoutineRow key={r.routine.id} state={r} />
               ))}
             </Section>
           )}

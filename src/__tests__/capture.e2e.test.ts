@@ -25,7 +25,7 @@ vi.mock("@/lib/supabase/server", () => ({
 vi.mock("@/lib/auth/token", () => ({
   resolveToken: mocks.resolveToken,
   bearerFromHeader: (h: string | null) =>
-    h ? /^Bearer\s+(.+)$/i.exec(h.trim())?.[1] ?? null : null,
+    h ? (/^Bearer\s+(.+)$/i.exec(h.trim())?.[1] ?? null) : null,
 }));
 
 vi.mock("@/lib/ai/classify", () => ({
@@ -38,6 +38,7 @@ const AREAS = [{ id: "area-haus", slug: "haus", name: "Haus" }];
 const INSERT_RETURNS: Record<string, { id: string }> = {
   inbox_items: { id: "inbox-1" },
   tasks: { id: "task-1" },
+  routines: { id: "routine-1" },
 };
 
 vi.mock("@/lib/supabase/admin", () => ({
@@ -67,7 +68,8 @@ vi.mock("@/lib/supabase/admin", () => ({
           mocks.inserted.push({ table: `${table}:update`, values });
           const r = {
             eq: () => r,
-            then: (res: (v: unknown) => void) => res({ data: null, error: null }),
+            then: (res: (v: unknown) => void) =>
+              res({ data: null, error: null }),
           };
           return r;
         },
@@ -107,7 +109,10 @@ describe("POST /api/capture (magic moment)", () => {
   it("token + spoken sentence → task in Haus with due_at", async () => {
     const res = await POST(
       request(
-        { text: "erinnere mich morgen 17 Uhr ans Öl checken", source: "ios_shortcut" },
+        {
+          text: "erinnere mich morgen 17 Uhr ans Öl checken",
+          source: "ios_shortcut",
+        },
         "Bearer atls_test",
       ),
     );
@@ -127,18 +132,51 @@ describe("POST /api/capture (magic moment)", () => {
     });
   });
 
+  it("classifies a recurring habit into a routine, not a task (TASK-035)", async () => {
+    mocks.classify.mockResolvedValue({
+      type: "routine",
+      title: "5 Minuten Mobility",
+      due_at: null,
+      area_slug: "haus",
+    });
+
+    const res = await POST(
+      request(
+        {
+          text: "jeden Morgen 5 Minuten Mobility machen",
+          source: "ios_shortcut",
+        },
+        "Bearer atls_test",
+      ),
+    );
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.type).toBe("routine");
+
+    // A routine row was created; no task row.
+    const routineInsert = mocks.inserted.find((i) => i.table === "routines");
+    expect(routineInsert?.values).toMatchObject({
+      user_id: "user-1",
+      area_id: "area-haus",
+      name: "5 Minuten Mobility",
+      time_of_day: "anytime",
+    });
+    expect(mocks.inserted.some((i) => i.table === "tasks")).toBe(false);
+  });
+
   it("rejects a missing token with 401", async () => {
     mocks.resolveToken.mockResolvedValue(null);
-    const res = await POST(
-      request({ text: "x", source: "ios_shortcut" }),
-    );
+    const res = await POST(request({ text: "x", source: "ios_shortcut" }));
     expect(res.status).toBe(401);
   });
 
   it("falls back to a 207 inbox note when classification fails", async () => {
     mocks.classify.mockRejectedValue(new Error("ai down"));
     const res = await POST(
-      request({ text: "irgendwas", source: "ios_shortcut" }, "Bearer atls_test"),
+      request(
+        { text: "irgendwas", source: "ios_shortcut" },
+        "Bearer atls_test",
+      ),
     );
     expect(res.status).toBe(207);
     const body = await res.json();
