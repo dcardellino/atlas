@@ -1,0 +1,80 @@
+{
+  "meta": {
+    "createdAt": "2026-06-30T00:00:00Z",
+    "updatedAt": "2026-06-30T00:00:00Z",
+    "version": "1.1",
+    "plaidVersion": "1.0"
+  },
+  "creator": {
+    "name": "Dominic Cardellino",
+    "expertise": "Platform/SRE Engineer mit über 10 Jahren Erfahrung — GKE, Terraform/Terragrunt, Go, Next.js, PostgreSQL, GCP/AWS. Festangestellt bei Digistore24, daneben freiberufliche DevOps/SRE-Praxis.",
+    "background": "Ich jongliere ständig viele parallele Vorhaben — Side-Projects, Freelance, Haushalt, Hyrox-Training, Familie. Ich habe über die Jahre alles probiert: Notion, Apple Notes, Todoist, Google Calendar. Jedes Tool ist entweder zu aufgeblasen oder für Business-Workflows gebaut, in die sich mein Privatleben nicht pressen lässt. Das eigentliche Problem ist nie das Tracking, sondern die Reibung beim Erfassen — und dass Notizen und Projekte irgendwo liegenbleiben und sterben. Ich kann selbst bauen (Go/Next.js-Stack, Homelab) und habe mit einem lokalen Voice-to-Text-Tool bereits Erfahrung mit Capture-Pipelines. Also baue ich mir mein eigenes Lebens-OS."
+  },
+  "purpose": {
+    "whoYouHelp": "Mich selbst: eine technische Person mit vielen parallelen Verantwortungsbereichen — Side-Projects, Freelance-Arbeit, Haushalt, Fitness (Hyrox), Familie, Reflexion/Journal — die ein einziges, reibungsarmes System für das ganze Leben will statt zwischen fünf Tools zu springen.",
+    "problemYouSolve": "Die Reibung beim Erfassen von Informationen verhindert die Nutzung jedes Systems. Bestehende Tools sind entweder zu elaboriert (Notion-Eigenbau, der selbst zur Last wird) oder zu Business-zentriert (PM-Tools, in die persönliche Tasks und Lebensbereiche nicht passen). Notizen, Ideen und Projekte landen irgendwo und werden nie wieder angefasst — es gibt nichts, das einen zurückholt.",
+    "desiredTransformation": "Vorher: Gedanken und Aufgaben verteilen sich über Notes, Kalender, Köpfe und Zettel; vieles geht verloren, das Sortieren kostet Energie. Nachher: Ein Satz ins iPhone gesprochen landet Sekunden später korrekt einsortiert im richtigen Lebensbereich — mit Fälligkeit, ohne manuelles Aufräumen. Das System holt liegengebliebene Dinge aktiv zurück, statt sie sterben zu lassen.",
+    "whyYou": "Ich bin SRE und kann das Ding selbst bauen und betreiben, ohne mich in Infrastruktur zu verlieren. Ich kenne meine eigenen Lebensbereiche besser als jedes generische Tool sie modellieren kann. Und ich habe mit einer lokalen Voice-to-Text-Pipeline (Oratio) bereits genau die Capture-Erfahrung, an der die meisten Eigenbauten scheitern."
+  },
+  "product": {
+    "name": "Atlas",
+    "oneLiner": "Atlas ist ein persönliches Lebens-OS, das per Sprach- oder Text-Capture alles über alle Lebensbereiche hinweg erfasst, von KI automatisch einsortiert und nichts mehr verloren gehen lässt.",
+    "howItWorks": "Capture steht im Zentrum: Über einen iOS-Shortcut (On-Device-Diktat) oder die PWA spricht oder tippt man einen Rohgedanken ein. Ein Anthropic-API-Call räumt den Text auf und klassifiziert ihn in strukturiertes JSON — Task, Notiz, Journal-Eintrag oder Routine — inklusive Fälligkeit und passendem Lebensbereich (Area). Der Eintrag landet automatisch sortiert in Supabase. Im Today-View sieht man die Top-3 des Tages, fällige Tasks und den Google-Kalender (read-only). Routinen mit Streak-Tracking decken wiederkehrende Gewohnheiten ab (z. B. Hyrox-Training, Protein-Targets). Journal-Einträge mit Fotos halten Reflexion fest. Eine Slipping-Erkennung meldet Bereiche und Aufgaben, die zu lange nicht angefasst wurden. In Phase 2 chattet man per KI über den gesamten eigenen Datenbestand.",
+    "keyCapabilities": [
+      "Frictionless Capture: iOS-Shortcut (Voice/Diktat) + PWA-Quick-Capture, KI bereinigt und klassifiziert den Rohtext automatisch",
+      "Today + Tasks: Top-3 des Tages, fällige Aufgaben nach Datum, Reminder via Push (ntfy), Google Calendar read-only eingebunden",
+      "Areas/Domains: die eigenen Lebensbereiche (Familie, Fitness, Haus, Side-Projects) als oberste Organisationsebene, alles hängt darunter",
+      "Routines + Streaks: morgens/mittags/abends, dauerhaft oder zeitlich begrenzt, mit Streak-Tracking für Hyrox und Ernährung",
+      "Journal/Library: leichtgewichtige Einträge per Voice oder Text mit Foto-Anhängen",
+      "AI-Chat über die eigenen Daten (Phase 2) plus Slipping-Erkennung für liegengebliebene Bereiche und Aufgaben"
+    ],
+    "platform": "web",
+    "marketDifferentiation": "Kein generisches PM- oder Notiz-Tool, sondern exakt auf eine Person und ihre realen Lebensbereiche zugeschnitten. Capture-Reibung gegen null statt Feature-Fülle. Bewusst NICHT Jareds Content-Pipeline/CRM/Inventory-Ballast, sondern nur das, was im eigenen Alltag wirklich zählt. Self-Hosting-fähiger Stack, Daten bleiben kontrollierbar.",
+    "magicMoment": "Man spricht beiläufig einen Satz ins iPhone — 'erinnere mich morgen um 17 Uhr ans Öl beim Auto checken' — und fünf Sekunden später liegt die Aufgabe korrekt im Bereich Haus, mit Fälligkeit und Reminder, ganz ohne manuelles Sortieren."
+  },
+  "audience": {
+    "primaryUser": "Dominic, Platform/SRE-Engineer Anfang/Mitte 30 in Herrenberg. Trainiert für Hyrox, betreibt mehrere Side-Projects parallel, arbeitet freiberuflich neben dem Hauptjob, lebt mit Frau und Hund. Technisch versiert, betreibt ein Homelab, aber chronisch knapp an Zeit und genervt davon, dass seine Gedanken und Aufgaben über zu viele Tools verstreut sind und verloren gehen.",
+    "secondaryUsers": [
+      "Seine Frau — als möglicher geteilter Nutzer für einen Haushalts-/Familien-Bereich in einer späteren Phase"
+    ],
+    "currentAlternatives": "Notion (wird beim Eigenbau selbst zur Last), Apple Notes (Notizen sterben dort), Todoist/Tasks-Apps (Business-Workflow-Logik), Google Calendar (bleibt für Kalender, deckt aber Tasks/Routinen/Journal nicht ab), handschriftliches Journal (landet im Regal und ist nicht durchsuchbar).",
+    "frustrations": "Erfassen kostet zu viele Schritte, deshalb wird es nicht gemacht. Generische Tools zwingen persönliche Lebensbereiche in Business-Strukturen. Nichts holt liegengebliebene Notizen oder Projekte zurück. Alles ist über mehrere Apps verstreut, es gibt keine einheitliche, aber sauber getrennte Sicht."
+  },
+  "business": {
+    "revenueModel": "free",
+    "initialGoal": "Innerhalb von 90 Tagen täglich genutzt: Die Capture-Gewohnheit sitzt, Atlas hat Apple Notes und mindestens eine Task-App ersetzt, und über alle Lebensbereiche hinweg geht spürbar nichts mehr verloren.",
+    "sixMonthVision": "Vollständiges Lebens-OS im Alltag verankert — inklusive KI-Chat über den eigenen Datenbestand, Slipping-Erkennung und optional einem geteilten Haushalts-Bereich mit der Frau. Optionaler Self-Hosting-Umzug ins Homelab, falls gewünscht.",
+    "constraints": "Side-Project, gebaut an Abenden/Wochenenden neben Vollzeitjob und Freelance. Muss reibungsarm bleiben — sobald die Erfassung Arbeit wird, ist das Projekt tot. Bewusst kein Over-Engineering: Single-User-App, kein Kubernetes. Managed Stack (Vercel + Supabase) für minimale Betriebslast, mit Self-Hosting als Exit-Option.",
+    "goToMarket": "Rein persönliche Nutzung, keine Vermarktung. Optional später ein Substack-/LinkedIn-Beitrag über den Bauprozess oder eine Open-Source-Veröffentlichung des Templates."
+  },
+  "feeling": {
+    "brandPersonality": "Ein ruhiger, schneller persönlicher Assistent, der sich aus dem Weg hält. Kein verspieltes Produktivitäts-Gamification, sondern werkzeughafte Klarheit — verlässlich, unaufdringlich, nie nervend. Wie ein gut sortierter Werkzeugkasten, der genau dann zur Hand ist, wenn man ihn braucht.",
+    "toneOfVoice": "Deutschsprachige UI, knapp und direkt, ohne Floskeln. Spricht den Nutzer wie einen kompetenten Erwachsenen an. Beispiel Erfolg: 'Erfasst — Aufgabe liegt im Bereich Haus, fällig morgen 17 Uhr.' Beispiel Fehler: 'Konnte den Eintrag nicht einsortieren — kurz prüfen?'"
+  },
+  "techStack": {
+    "appType": "web",
+    "frontend": {
+      "choice": "Next.js (App Router) + TypeScript, als PWA",
+      "rationale": "Etablierter Stack des Nutzers, beste Unterstützung durch KI-Coding-Tools, deployt nahtlos auf Vercel, PWA-fähig für den Homescreen-Zugriff vom iPhone."
+    },
+    "backend": {
+      "choice": "Supabase + Next.js Route Handlers/Server Actions",
+      "rationale": "Vom Nutzer gewählt. Managed Postgres, Auth und Storage aus einer Hand; die leichten Background-Jobs (Slipping, Daily Summary, Calendar-Sync) laufen kurzlebig über Vercel Cron auf Route Handler. Self-Hosting von Supabase bleibt als späterer Exit ohne Code-Änderung möglich."
+    },
+    "database": {
+      "choice": "Supabase Postgres (mit RLS, pgvector in Phase 2)",
+      "rationale": "Relationales Modell passt zu Tasks/Areas/Routines/Journal; Row Level Security sauber per user_id auch im Single-User-Fall; pgvector für den KI-Chat über die eigenen Daten in Phase 2."
+    },
+    "auth": {
+      "choice": "Supabase Auth",
+      "rationale": "Direkt im gewählten Backend enthalten, kein zusätzlicher Anbieter nötig; schützt sowohl die PWA als auch den Capture-Endpoint per Token."
+    },
+    "payments": {
+      "choice": "None",
+      "rationale": "Persönliches Single-User-Tool ohne Monetarisierung — keine Zahlungsabwicklung erforderlich."
+    }
+  },
+  "tooling": {
+    "codingAgent": "claude-code"
+  }
+}
