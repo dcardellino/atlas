@@ -58,7 +58,7 @@ function Row({
         aria-label={task.status === "done" ? "Wieder öffnen" : "Abhaken"}
         disabled={pending}
         onClick={() => startTransition(() => toggleComplete(task.id))}
-        className={`h-[18px] w-[18px] shrink-0 rounded-sm border border-border ${
+        className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-sm border border-border text-[11px] leading-none ${
           task.status === "done" ? "bg-on-surface text-surface" : "bg-surface"
         }`}
       >
