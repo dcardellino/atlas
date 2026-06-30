@@ -54,7 +54,7 @@ function RoutineRow({
             loggedToday ? unlogToday(routine.id) : logToday(routine.id),
           )
         }
-        className={`mt-[2px] h-[18px] w-[18px] shrink-0 rounded-sm border border-border ${
+        className={`mt-[2px] flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-sm border border-border text-[11px] leading-none ${
           loggedToday ? "bg-on-surface text-surface" : "bg-surface"
         }`}
       >
