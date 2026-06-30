@@ -1,13 +1,9 @@
-export default function AreasPage() {
-  return (
-    <section>
-      <p className="font-mono text-label uppercase tracking-label text-on-surface-muted">
-        Lebensbereiche
-      </p>
-      <h1 className="mt-1 font-serif text-display text-on-surface">Areas</h1>
-      <p className="mt-6 text-body text-on-surface-muted">
-        Verwaltung der Lebensbereiche folgt in Phase&nbsp;2.
-      </p>
-    </section>
-  );
+import AreaManager from "@/components/features/areas/AreaManager";
+import { list, listOrphans } from "@/lib/areas/actions";
+
+// Areas entry point (TASK-027/028). Fetches areas + orphaned entries server-side;
+// AreaManager handles drag-reorder, create/edit and orphan reassignment client-side.
+export default async function AreasPage() {
+  const [areas, orphans] = await Promise.all([list(), listOrphans()]);
+  return <AreaManager areas={areas} orphans={orphans} />;
 }

@@ -1,12 +1,15 @@
 import { fromZonedTime, formatInTimeZone } from "date-fns-tz";
 import { createClient } from "@/lib/supabase/server";
 import type { Task } from "@/lib/tasks/actions";
+import { listWithState } from "@/lib/routines/actions";
+import type { RoutineState } from "@/lib/routines/types";
 
 /**
- * Today-View aggregation (TASK-020, FR-003).
+ * Today-View aggregation (TASK-020, FR-003; routines TASK-033).
  *
- * Returns the three Phase-1 buckets — Top-3, due today, recently captured.
- * Calendar events follow in Phase 3 (TASK-045). Runs under the session client.
+ * Returns the Phase-1 buckets — Top-3, due today, recently captured — plus the
+ * day's active routines (checkable inline, Vision Flow 3). Calendar events
+ * follow in Phase 3 (TASK-045). Runs under the session client.
  */
 
 export type RecentInboxItem = {
@@ -21,6 +24,7 @@ export type TodaySummary = {
   top3: Task[];
   dueToday: Task[];
   recentInbox: RecentInboxItem[];
+  routines: RoutineState[];
 };
 
 /** [startUtc, endUtc) covering the user's local calendar day. */
@@ -39,11 +43,11 @@ export async function summary(
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { top3: [], dueToday: [], recentInbox: [] };
+  if (!user) return { top3: [], dueToday: [], recentInbox: [], routines: [] };
 
   const [startUtc, endUtc] = dayBoundsUtc(now, tz);
 
-  const [top3Res, dueRes, inboxRes] = await Promise.all([
+  const [top3Res, dueRes, inboxRes, routines] = await Promise.all([
     supabase
       .from("tasks")
       .select("*")
@@ -65,11 +69,13 @@ export async function summary(
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(5),
+    listWithState(now, tz),
   ]);
 
   return {
     top3: (top3Res.data as Task[]) ?? [],
     dueToday: (dueRes.data as Task[]) ?? [],
     recentInbox: (inboxRes.data as RecentInboxItem[]) ?? [],
+    routines,
   };
 }

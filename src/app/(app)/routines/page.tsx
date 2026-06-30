@@ -1,13 +1,32 @@
-export default function RoutinesPage() {
+import RoutineList from "@/components/features/routines/RoutineList";
+import { listWithState, listArchived } from "@/lib/routines/actions";
+import { createClient } from "@/lib/supabase/server";
+
+// Routines entry point (TASK-032). Fetches active routines (with streak state),
+// the archive, and areas server-side; RoutineList handles check-off and editing.
+export default async function RoutinesPage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const [routines, archived, areasRes] = await Promise.all([
+    listWithState(),
+    listArchived(),
+    user
+      ? supabase
+          .from("areas")
+          .select("id, name")
+          .eq("user_id", user.id)
+          .order("sort_order", { ascending: true })
+      : Promise.resolve({ data: [] as { id: string; name: string }[] }),
+  ]);
+
   return (
-    <section>
-      <p className="font-mono text-label uppercase tracking-label text-on-surface-muted">
-        Routinen
-      </p>
-      <h1 className="mt-1 font-serif text-display text-on-surface">Routines</h1>
-      <p className="mt-6 text-body text-on-surface-muted">
-        Routinen mit Streak-Tracking folgen in Phase&nbsp;2.
-      </p>
-    </section>
+    <RoutineList
+      routines={routines}
+      archived={archived}
+      areas={areasRes.data ?? []}
+    />
   );
 }
