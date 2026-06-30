@@ -1,13 +1,14 @@
-export default function TodayPage() {
-  return (
-    <section>
-      <p className="font-mono text-label uppercase tracking-label text-on-surface-muted">
-        Heute
-      </p>
-      <h1 className="mt-1 font-serif text-display text-on-surface">Today</h1>
-      <p className="mt-6 text-body text-on-surface-muted">
-        Top-3, Fälligkeiten und kürzlich Erfasstes folgen in Phase&nbsp;1.
-      </p>
-    </section>
-  );
+import TodayView from "@/components/features/today/TodayView";
+import { summary, type TodaySummary } from "@/lib/today/summary";
+
+// Today entry point (TASK-021). Server-fetches the summary; on failure renders
+// the error state inline (no crash) per PRD § UI/UX > Today.
+export default async function TodayPage() {
+  let data: TodaySummary | undefined;
+  try {
+    data = await summary();
+  } catch {
+    data = undefined;
+  }
+  return data ? <TodayView data={data} /> : <TodayView error />;
 }
