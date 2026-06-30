@@ -1,0 +1,81 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Atlas design tokens — values from docs/design.md front-matter.
+ * Light is the default; dark is warm (Espresso, not Slate). Dark applies both
+ * automatically (prefers-color-scheme) and via a manual `.dark` class on <html>.
+ */
+:root {
+  --color-surface: #f6ece8;
+  --color-surface-raised: #fcf6f3;
+  --color-on-surface: #1f1b19;
+  --color-on-surface-muted: #8c8178;
+  --color-border: #e6dad4;
+  --color-accent: #a8432b;
+  --color-on-accent: #fbf4f1;
+  --color-success: #3e6b4f;
+  --color-warning: #b57f2e;
+  --color-danger: #8f2c20;
+  --color-info: #3b5a6b;
+  --color-cat-rust: #a8432b;
+  --color-cat-forest: #3e6b4f;
+  --color-cat-navy: #2f4858;
+  --color-cat-gold: #b57f2e;
+  --color-cat-maroon: #6e2a2a;
+  --color-cat-teal: #2c6e6a;
+  --color-cat-violet: #6b5b95;
+  --color-cat-stone: #8c8178;
+}
+
+/*
+ * Warm dark palette (the *-dark token variants from docs/design.md), applied
+ * two ways: a manual `.dark` class (always wins) and the system preference.
+ */
+.dark {
+  --color-surface: #1a1614;
+  --color-surface-raised: #241e1b;
+  --color-on-surface: #ede4de;
+  --color-on-surface-muted: #a2958c;
+  --color-border: #332a26;
+  --color-accent: #c75a3e;
+  --color-on-accent: #1a1614;
+  --color-success: #5e8c6f;
+  --color-warning: #d19e4e;
+  --color-danger: #c75144;
+  --color-info: #6e93a6;
+}
+
+/* System preference, unless an explicit `.light` opt-out is set on <html>. */
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    --color-surface: #1a1614;
+    --color-surface-raised: #241e1b;
+    --color-on-surface: #ede4de;
+    --color-on-surface-muted: #a2958c;
+    --color-border: #332a26;
+    --color-accent: #c75a3e;
+    --color-on-accent: #1a1614;
+    --color-success: #5e8c6f;
+    --color-warning: #d19e4e;
+    --color-danger: #c75144;
+    --color-info: #6e93a6;
+  }
+}
+
+@layer base {
+  html {
+    height: 100%;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    min-height: 100%;
+    background-color: var(--color-surface);
+    color: var(--color-on-surface);
+    font-family: var(--font-sans), system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}

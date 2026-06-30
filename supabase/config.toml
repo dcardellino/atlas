@@ -1,0 +1,11 @@
+# Minimal Supabase CLI config so `supabase/migrations` is a valid project.
+# Run `supabase link` / `supabase db push` against your project when ready.
+project_id = "atlas"
+
+[db]
+# Postgres major version used by the local dev stack.
+major_version = 15
+
+[db.migrations]
+# Apply files in supabase/migrations in lexical order (0001, 0002, 0003, ...).
+schema_paths = []
