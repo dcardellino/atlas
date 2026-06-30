@@ -40,3 +40,4 @@ public/swe-worker*.js
 # supabase local
 /supabase/.branches
 /supabase/.temp
+.env*
