@@ -1,37 +1,37 @@
-# Atlas — iOS-Shortcut einrichten
+# Atlas — iOS Shortcut Setup
 
-Der Shortcut ist der kürzeste Weg vom Gedanken zum erfassten Eintrag: ein
-gesprochener Satz ins iPhone, fünf Sekunden später korrekt einsortiert. Er
-diktiert on-device und schickt den Text authentifiziert an `/api/capture`.
+The shortcut is the shortest path from a thought to a captured entry: speak a
+sentence into your iPhone and, five seconds later, it's filed correctly. It
+dictates on-device and sends the text, authenticated, to `/api/capture`.
 
-## Voraussetzungen
+## Prerequisites
 
-1. **Token erzeugen.** In Atlas → **Settings → Shortcut-Tokens** ein Token
-   erzeugen. Der Klartext wird **genau einmal** angezeigt — sofort kopieren.
-2. **Basis-URL** der Atlas-Installation kennen, z.B. `https://atlas.example.com`.
+1. **Create a token.** In Atlas → **Settings → Shortcut Tokens**, create a
+   token. The plaintext is shown **exactly once** — copy it immediately.
+2. **Know your base URL**, e.g. `https://atlas.example.com`.
 
-## Shortcut Schritt für Schritt
+## Building the shortcut
 
-1. App **Kurzbefehle** öffnen → **+** (neuer Kurzbefehl).
-2. Aktion **„Text diktieren"** (Dictate Text) hinzufügen.
-   - Sprache: Deutsch. „Bei Pause beenden" ist angenehm fürs Freisprechen.
-3. Aktion **„Inhalte von URL abrufen"** (Get Contents of URL) hinzufügen:
-   - **URL:** `https://DEINE-DOMAIN/api/capture`
-   - **Methode:** `POST`
-   - **Header:**
-     - `Authorization` = `Bearer DEIN_TOKEN`
+1. Open the **Shortcuts** app → **+** (new shortcut).
+2. Add the **"Dictate Text"** action.
+   - Language: German. "Stop on pause" is convenient for hands-free use.
+3. Add the **"Get Contents of URL"** action:
+   - **URL:** `https://YOUR-DOMAIN/api/capture`
+   - **Method:** `POST`
+   - **Headers:**
+     - `Authorization` = `Bearer YOUR_TOKEN`
      - `Content-Type` = `application/json`
-   - **Anfragetext:** `JSON`
-     - `text` = (Variable) **Diktierter Text**
+   - **Request Body:** `JSON`
+     - `text` = (variable) **Dictated Text**
      - `source` = `ios_shortcut`
-4. Aktion **„Wörterbuchwert abrufen"** (Get Dictionary Value) hinzufügen:
-   - Schlüssel `title` aus **Inhalte von URL** (für die Rückmeldung).
-5. Aktion **„Mitteilung anzeigen"** (Show Notification):
-   - Text: z.B. `Erfasst: ` + **Wörterbuchwert**.
-6. Kurzbefehl benennen (z.B. „Atlas erfassen") und zum Home-Screen / als
-   „Hey Siri"-Auslöser hinzufügen.
+4. Add the **"Get Dictionary Value"** action:
+   - Key `title` from **Contents of URL** (for the confirmation).
+5. Add the **"Show Notification"** action:
+   - Text: e.g. `Captured: ` + **Dictionary Value**.
+6. Name the shortcut (e.g. "Capture to Atlas") and add it to the Home Screen or
+   as a "Hey Siri" trigger.
 
-## Request-Format (Referenz)
+## Request format (reference)
 
 ```http
 POST /api/capture
@@ -41,16 +41,16 @@ Content-Type: application/json
 { "text": "erinnere mich morgen 17 Uhr ans Öl checken", "source": "ios_shortcut" }
 ```
 
-Antworten:
+Responses:
 
-- `201` — erfasst: `{ "type", "id", "title", "area": { "id", "name" } | null, "due_at" }`
-- `207` — KI-Klassifikation fehlgeschlagen, als Notiz in der Inbox abgelegt
-  (kein Datenverlust): `{ "type": "note", "id", "note": "unklassifiziert, in Inbox" }`
-- `401` — Token ungültig/abgelaufen → in den Settings ein neues erzeugen.
-- `429` — Rate-Limit (60/min) erreicht → kurz warten.
+- `201` — captured: `{ "type", "id", "title", "area": { "id", "name" } | null, "due_at" }`
+- `207` — AI classification failed; stored as a note in the inbox (no data
+  loss): `{ "type": "note", "id", "note": "unklassifiziert, in Inbox" }`
+- `401` — token invalid/expired → create a new one in Settings.
+- `429` — rate limit (60/min) reached → wait briefly.
 
-## Verifikation
+## Verification
 
-Den Shortcut einmal real ausführen, einen Satz mit Fälligkeit diktieren
-(„erinnere mich morgen 17 Uhr ans Öl checken") und in Atlas prüfen, dass der
-Task im passenden Bereich mit korrektem `due_at` erscheint.
+Run the shortcut once for real, dictate a sentence with a due time
+("erinnere mich morgen 17 Uhr ans Öl checken"), and confirm in Atlas that the
+task appears in the right area with the correct `due_at`.
