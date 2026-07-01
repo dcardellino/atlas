@@ -197,7 +197,7 @@ function RoutineEditor({
               type="time"
               value={specificTime}
               onChange={(e) => setSpecificTime(e.target.value)}
-              className={fieldInput}
+              className={`${fieldInput} appearance-none text-left`}
             />
           </label>
         </div>
