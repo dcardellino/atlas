@@ -1,0 +1,41 @@
+name: Atlas scheduled crons
+
+# Vercel Hobby throttles cron jobs to roughly daily, so this workflow drives the
+# reminder / calendar-sync / daily-summary routes at real frequency. Each call is
+# authenticated with the shared CRON_SECRET (repo secret). CRON_BASE_URL is the
+# deployment origin, e.g. https://atlas.vercel.app. See TASK-042/043/044.
+on:
+  schedule:
+    - cron: "*/15 * * * *" # reminders + calendar sync
+    - cron: "0 5 * * *" # daily summary (~06:00–07:00 Europe/Berlin)
+  workflow_dispatch:
+
+concurrency:
+  group: atlas-crons
+  cancel-in-progress: false
+
+jobs:
+  frequent:
+    if: github.event.schedule == '*/15 * * * *' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Reminders
+        run: >
+          curl -fsS -X GET
+          -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
+          "${{ secrets.CRON_BASE_URL }}/api/cron/reminders"
+      - name: Calendar sync
+        run: >
+          curl -fsS -X GET
+          -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
+          "${{ secrets.CRON_BASE_URL }}/api/cron/calendar-sync"
+
+  daily_summary:
+    if: github.event.schedule == '0 5 * * *' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Daily summary
+        run: >
+          curl -fsS -X GET
+          -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
+          "${{ secrets.CRON_BASE_URL }}/api/cron/daily-summary"
