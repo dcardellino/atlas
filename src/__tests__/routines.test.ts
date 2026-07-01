@@ -5,7 +5,7 @@ vi.mock("@/lib/supabase/server", () => ({ createClient: mocks.createClient }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 import { currentStreak, lastNDays } from "@/lib/routines/streak";
-import { logToday, listWithState } from "@/lib/routines/actions";
+import { logToday, listWithState, remove } from "@/lib/routines/actions";
 
 /**
  * Routines actions + streak (TASK-029/030/031, FR-007): pure streak edges,
@@ -24,16 +24,24 @@ function makeClient(opts: ClientOpts = {}) {
     options: unknown;
   }[] = [];
   const updates: { table: string; values: Record<string, unknown> }[] = [];
+  const deletes: { table: string; filters: Record<string, unknown> }[] = [];
 
   function builder(table: string) {
     const b: Record<string, unknown> = {};
+    const filters: Record<string, unknown> = {};
     const chain = () => b;
     b.select = chain;
-    b.eq = chain;
+    b.eq = (col: string, val: unknown) => {
+      filters[col] = val;
+      return b;
+    };
     b.order = chain;
     b.is = chain;
     b.not = chain;
-    b.delete = chain;
+    b.delete = () => {
+      deletes.push({ table, filters });
+      return b;
+    };
     b.update = (values: Record<string, unknown>) => {
       updates.push({ table, values });
       return b;
@@ -51,6 +59,7 @@ function makeClient(opts: ClientOpts = {}) {
   return {
     upserts,
     updates,
+    deletes,
     client: {
       auth: {
         getUser: vi.fn().mockResolvedValue({ data: { user: { id: "u1" } } }),
@@ -117,6 +126,17 @@ describe("routines actions (TASK-029/031)", () => {
       onConflict: "routine_id,log_date",
       ignoreDuplicates: true,
     });
+  });
+
+  it("remove deletes the routine scoped to id and user", async () => {
+    const { client, deletes } = makeClient();
+    mocks.createClient.mockResolvedValue(client);
+
+    await remove("r1");
+
+    const del = deletes.find((d) => d.table === "routines");
+    expect(del).toBeTruthy();
+    expect(del?.filters).toMatchObject({ id: "r1", user_id: "u1" });
   });
 
   it("listWithState archives elapsed time-boxed routines and computes streaks", async () => {

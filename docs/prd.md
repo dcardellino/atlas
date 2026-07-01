@@ -278,7 +278,7 @@ Interne Operationen (Server Actions, Auth via Session):
 ```
 tasks:    list(filter) · create · update · toggleComplete · setTop3 · remove
 areas:    list · create · update · reorder · remove
-routines: list · create · update · archive · logToday(routineId) · streak(routineId)
+routines: list · create · update · remove · logToday(routineId) · streak(routineId)
 journal:  listFeed · create(body, areaId, mediaFiles[]) · remove
 today:    summary()  -> { top3, dueToday, recentInbox, calendarEvents }
 tokens:   list · create -> { plaintextOnce } · revoke

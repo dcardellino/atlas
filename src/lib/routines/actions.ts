@@ -99,13 +99,14 @@ export async function update(
   revalidatePath("/today");
 }
 
-export async function archive(id: string): Promise<void> {
+/**
+ * Delete a routine permanently. Its `routine_logs` (streak history) are removed
+ * by the DB FK (`ON DELETE CASCADE`). Note: time-boxed routines still auto-hide
+ * once expired via `archiveExpired` below — this is the explicit user action.
+ */
+export async function remove(id: string): Promise<void> {
   const { supabase, userId } = await requireUser();
-  await supabase
-    .from("routines")
-    .update({ archived_at: new Date().toISOString() })
-    .eq("id", id)
-    .eq("user_id", userId);
+  await supabase.from("routines").delete().eq("id", id).eq("user_id", userId);
   revalidatePath("/routines");
   revalidatePath("/today");
 }
@@ -228,18 +229,6 @@ export async function listWithState(
       last30: lastNDays(dates, today, 30),
     };
   });
-}
-
-/** Archived routines (the archive section of the Routines screen). */
-export async function listArchived(): Promise<Routine[]> {
-  const { supabase, userId } = await requireUser();
-  const { data } = await supabase
-    .from("routines")
-    .select("*")
-    .eq("user_id", userId)
-    .not("archived_at", "is", null)
-    .order("archived_at", { ascending: false });
-  return (data as Routine[]) ?? [];
 }
 
 /** Current streak for a single routine (API spec: routines.streak). */

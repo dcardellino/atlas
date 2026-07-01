@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { create, update, type Task } from "@/lib/tasks/actions";
+import { create, update, remove, type Task } from "@/lib/tasks/actions";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 /**
  * Task detail/edit form (TASK-023). Edits title, notes, due_at, reminder_at,
@@ -53,6 +54,7 @@ export default function TaskEditor({
   );
   const [areaId, setAreaId] = useState(task?.area_id ?? "");
   const [recurrence, setRecurrence] = useState(task?.recurrence ?? "");
+  const [confirming, setConfirming] = useState(false);
   const [pending, startTransition] = useTransition();
 
   function save() {
@@ -74,7 +76,16 @@ export default function TaskEditor({
     });
   }
 
+  function doDelete() {
+    if (!task) return;
+    startTransition(async () => {
+      await remove(task.id);
+      onClose();
+    });
+  }
+
   return (
+    <>
     <div
       className="fixed inset-0 z-40 flex items-start justify-center bg-on-surface/30 px-4 pt-16"
       onClick={onClose}
@@ -157,30 +168,54 @@ export default function TaskEditor({
           </label>
         </div>
 
-        <div className="mt-4 flex justify-end gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            className="h-11 rounded-sm bg-surface px-4 font-mono text-label uppercase tracking-label text-on-surface"
-          >
-            Abbrechen
-          </button>
-          <button
-            type="button"
-            onClick={save}
-            disabled={pending || !title.trim()}
-            className="h-11 rounded-sm bg-on-surface px-5 font-mono text-label uppercase tracking-label text-surface transition-colors hover:bg-accent hover:text-on-accent disabled:opacity-60"
-          >
-            {pending
-              ? task
-                ? "Speichern…"
-                : "Anlegen…"
-              : task
-                ? "Speichern"
-                : "Anlegen"}
-          </button>
+        <div className="mt-4 flex items-center justify-between gap-3">
+          {task ? (
+            <button
+              type="button"
+              onClick={() => setConfirming(true)}
+              disabled={pending}
+              className="h-11 rounded-sm px-2 font-mono text-label uppercase tracking-label text-danger disabled:opacity-60"
+            >
+              Löschen
+            </button>
+          ) : (
+            <span />
+          )}
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="h-11 rounded-sm bg-surface px-4 font-mono text-label uppercase tracking-label text-on-surface"
+            >
+              Abbrechen
+            </button>
+            <button
+              type="button"
+              onClick={save}
+              disabled={pending || !title.trim()}
+              className="h-11 rounded-sm bg-on-surface px-5 font-mono text-label uppercase tracking-label text-surface transition-colors hover:bg-accent hover:text-on-accent disabled:opacity-60"
+            >
+              {pending
+                ? task
+                  ? "Speichern…"
+                  : "Anlegen…"
+                : task
+                  ? "Speichern"
+                  : "Anlegen"}
+            </button>
+          </div>
         </div>
       </div>
     </div>
+      {confirming && task && (
+        <ConfirmDialog
+          title="Aufgabe löschen"
+          message={`„${task.title}“ wird endgültig gelöscht.`}
+          onConfirm={doDelete}
+          onCancel={() => setConfirming(false)}
+          pending={pending}
+        />
+      )}
+    </>
   );
 }
