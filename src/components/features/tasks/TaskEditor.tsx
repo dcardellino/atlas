@@ -111,7 +111,7 @@ export default function TaskEditor({
               type="datetime-local"
               value={dueAt}
               onChange={(e) => setDueAt(e.target.value)}
-              className={`${fieldInput} appearance-none text-left`}
+              className={`${fieldInput} min-h-[42px] appearance-none text-left`}
             />
           </label>
           <label className="block">
@@ -120,7 +120,7 @@ export default function TaskEditor({
               type="datetime-local"
               value={reminderAt}
               onChange={(e) => setReminderAt(e.target.value)}
-              className={`${fieldInput} appearance-none text-left`}
+              className={`${fieldInput} min-h-[42px] appearance-none text-left`}
             />
           </label>
         </div>
