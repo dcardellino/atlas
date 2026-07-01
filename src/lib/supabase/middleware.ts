@@ -1,8 +1,14 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-// Routes reachable without a session. Everything else under (app)/** is gated.
-const PUBLIC_PATHS = ["/login"];
+// Routes reachable without a session. `/login` is the sign-in page; `/api`
+// routes are excluded from the session gate because they authenticate
+// themselves (cron via CRON_SECRET, capture via a bearer token / their own
+// getUser check). Without this, requests that carry a bearer token but no
+// session cookie — the GitHub Actions crons and the iOS capture shortcut — get
+// 302-redirected to /login and their handlers never run. Everything else under
+// (app)/** stays gated.
+const PUBLIC_PATHS = ["/login", "/api"];
 
 function isPublicPath(pathname: string) {
   return PUBLIC_PATHS.some(
