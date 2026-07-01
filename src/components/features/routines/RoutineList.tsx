@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import {
   create,
   update,
-  archive,
+  remove,
   logToday,
   unlogToday,
 } from "@/lib/routines/actions";
@@ -15,12 +15,13 @@ import {
   type TimeOfDay,
 } from "@/lib/routines/types";
 import StreakChart from "@/components/features/routines/StreakChart";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import type { AreaOption } from "@/components/features/tasks/TaskEditor";
 
 /**
  * Routines UI (TASK-032, FR-007 / Vision Flow 3). Grouped by time of day with a
- * one-tap check-off that writes today's log and updates the visible streak, plus
- * a separate archive section. Sober streak feedback (no gamification).
+ * one-tap check-off that writes today's log and updates the visible streak.
+ * Sober streak feedback (no gamification).
  */
 
 const GROUP_LABEL: Record<TimeOfDay, string> = {
@@ -116,6 +117,7 @@ function RoutineEditor({
   );
   const [notify, setNotify] = useState(routine?.notify ?? false);
   const [areaId, setAreaId] = useState(routine?.area_id ?? "");
+  const [confirming, setConfirming] = useState(false);
   const [pending, startTransition] = useTransition();
 
   function save() {
@@ -135,15 +137,16 @@ function RoutineEditor({
     });
   }
 
-  function doArchive() {
+  function doDelete() {
     if (!routine) return;
     startTransition(async () => {
-      await archive(routine.id);
+      await remove(routine.id);
       onClose();
     });
   }
 
   return (
+    <>
     <div
       className="bg-on-surface/30 fixed inset-0 z-40 flex items-start justify-center px-4 pt-16"
       onClick={onClose}
@@ -246,11 +249,11 @@ function RoutineEditor({
           {routine ? (
             <button
               type="button"
-              onClick={doArchive}
+              onClick={() => setConfirming(true)}
               disabled={pending}
-              className="h-11 rounded-sm px-2 font-mono text-label uppercase tracking-label text-on-surface-muted disabled:opacity-60"
+              className="h-11 rounded-sm px-2 font-mono text-label uppercase tracking-label text-danger disabled:opacity-60"
             >
-              Archivieren
+              Löschen
             </button>
           ) : (
             <span />
@@ -275,16 +278,24 @@ function RoutineEditor({
         </div>
       </div>
     </div>
+      {confirming && routine && (
+        <ConfirmDialog
+          title="Routine löschen"
+          message={`„${routine.name}“ und die zugehörige Streak-Historie werden endgültig gelöscht.`}
+          onConfirm={doDelete}
+          onCancel={() => setConfirming(false)}
+          pending={pending}
+        />
+      )}
+    </>
   );
 }
 
 export default function RoutineList({
   routines,
-  archived,
   areas,
 }: {
   routines: RoutineState[];
-  archived: Routine[];
   areas: AreaOption[];
 }) {
   const [editing, setEditing] = useState<Routine | null>(null);
@@ -342,29 +353,6 @@ export default function RoutineList({
             </div>
           );
         })
-      )}
-
-      {archived.length > 0 && (
-        <div className="mt-12">
-          <p className="font-mono text-label uppercase tracking-label text-on-surface-muted">
-            Archiv
-          </p>
-          <ul className="mt-2">
-            {archived.map((r) => (
-              <li
-                key={r.id}
-                className="flex items-center gap-3 border-b border-border py-3"
-              >
-                <span className="flex-1 truncate text-body text-on-surface-muted line-through">
-                  {r.name}
-                </span>
-                <span className="font-mono text-meta uppercase tracking-label text-on-surface-muted">
-                  {GROUP_LABEL[r.time_of_day]}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
       )}
 
       {(editing || creating) && (

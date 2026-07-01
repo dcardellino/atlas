@@ -1,18 +1,17 @@
 import RoutineList from "@/components/features/routines/RoutineList";
-import { listWithState, listArchived } from "@/lib/routines/actions";
+import { listWithState } from "@/lib/routines/actions";
 import { createClient } from "@/lib/supabase/server";
 
-// Routines entry point (TASK-032). Fetches active routines (with streak state),
-// the archive, and areas server-side; RoutineList handles check-off and editing.
+// Routines entry point (TASK-032). Fetches active routines (with streak state)
+// and areas server-side; RoutineList handles check-off and editing.
 export default async function RoutinesPage() {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [routines, archived, areasRes] = await Promise.all([
+  const [routines, areasRes] = await Promise.all([
     listWithState(),
-    listArchived(),
     user
       ? supabase
           .from("areas")
@@ -22,11 +21,5 @@ export default async function RoutinesPage() {
       : Promise.resolve({ data: [] as { id: string; name: string }[] }),
   ]);
 
-  return (
-    <RoutineList
-      routines={routines}
-      archived={archived}
-      areas={areasRes.data ?? []}
-    />
-  );
+  return <RoutineList routines={routines} areas={areasRes.data ?? []} />;
 }
