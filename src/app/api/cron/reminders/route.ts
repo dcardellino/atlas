@@ -9,8 +9,8 @@ import { sendNtfy } from "@/lib/notify/ntfy";
  * `reminder_sent_at` so a later run never re-sends (de-dup via 0006). Runs
  * system-side with the admin client; secured by CRON_SECRET.
  *
- * On Vercel Hobby the vercel.json schedule fires only daily, so a GitHub Actions
- * workflow curls this route every few minutes for real reminder latency.
+ * Triggered by the GitHub Actions scheduler (.github/workflows/cron.yml) every
+ * ~15 min — Vercel Hobby cron is limited to daily, so it is not used here.
  */
 export const dynamic = "force-dynamic";
 

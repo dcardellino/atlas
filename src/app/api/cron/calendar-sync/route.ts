@@ -8,8 +8,8 @@ import { syncCalendarForUser } from "@/lib/calendar/sync";
  * every user that owns data (single-user MVP: distinct owners of areas, seeded
  * on first login). A per-user failure is recorded and skipped — it never fails
  * the whole run, and the previous cache stays visible (Edge Cases). Secured by
- * CRON_SECRET. On Hobby the vercel.json schedule fires daily; GitHub Actions
- * curls this every 30 min for fresher events.
+ * CRON_SECRET. Triggered by the GitHub Actions scheduler
+ * (.github/workflows/cron.yml); Vercel Hobby cron is limited to daily.
  */
 export const dynamic = "force-dynamic";
 
