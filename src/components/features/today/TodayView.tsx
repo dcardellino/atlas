@@ -7,6 +7,7 @@ import { logToday, unlogToday } from "@/lib/routines/actions";
 import type { RoutineState } from "@/lib/routines/types";
 import { StreakIndicator } from "@/components/features/routines/StreakChart";
 import type { TodaySummary, RecentInboxItem } from "@/lib/today/summary";
+import type { CalendarEvent, CalendarState } from "@/lib/calendar/types";
 
 /**
  * Today-View UI (TASK-021). Sections: Top-3, heute fällig, kürzlich erfasst.
@@ -107,6 +108,48 @@ function Section({
   );
 }
 
+function CalendarRow({ event }: { event: CalendarEvent }) {
+  return (
+    <li className="flex items-center gap-3 border-b border-border py-3">
+      <span className="flex-1 text-body text-on-surface">
+        {event.summary ?? "(ohne Titel)"}
+      </span>
+      <span className="font-mono text-meta uppercase tracking-label text-on-surface-muted">
+        {event.all_day
+          ? "Ganztägig"
+          : formatInTimeZone(new Date(event.start_at), TZ, "HH:mm")}
+      </span>
+    </li>
+  );
+}
+
+/**
+ * Calendar connection/stale hint (Edge Cases: not connected or sync failed →
+ * show a hint, never crash; the rest of Today keeps working).
+ */
+function CalendarNotice({ state }: { state: CalendarState }) {
+  if (state.error) {
+    return (
+      <p className="mt-4 text-body-sm text-on-surface-muted">
+        Kalender-Sync hatte zuletzt ein Problem — angezeigt wird der letzte
+        bekannte Stand.
+      </p>
+    );
+  }
+  if (!state.connected) {
+    return (
+      <p className="mt-4 text-body-sm text-on-surface-muted">
+        Kalender noch nicht verbunden.{" "}
+        <a href="/settings" className="underline">
+          In den Einstellungen einrichten
+        </a>
+        .
+      </p>
+    );
+  }
+  return null;
+}
+
 function RecentRow({ item }: { item: RecentInboxItem }) {
   return (
     <li className="flex items-center gap-3 border-b border-border py-3">
@@ -146,7 +189,8 @@ export default function TodayView({
     data.top3.length === 0 &&
     data.dueToday.length === 0 &&
     data.recentInbox.length === 0 &&
-    data.routines.length === 0;
+    data.routines.length === 0 &&
+    data.calendarEvents.length === 0;
 
   return (
     <section>
@@ -180,6 +224,13 @@ export default function TodayView({
               ))}
             </Section>
           )}
+          {data.calendarEvents.length > 0 && (
+            <Section title="Kalender">
+              {data.calendarEvents.map((ev) => (
+                <CalendarRow key={ev.id} event={ev} />
+              ))}
+            </Section>
+          )}
           {data.recentInbox.length > 0 && (
             <Section title="Kürzlich erfasst">
               {data.recentInbox.map((i) => (
@@ -189,6 +240,8 @@ export default function TodayView({
           )}
         </>
       )}
+
+      <CalendarNotice state={data.calendarState} />
     </section>
   );
 }
