@@ -109,6 +109,7 @@ export default function TaskList({
   const [status, setStatus] = useState<StatusFilter>("open");
   const [areaId, setAreaId] = useState<string>("all");
   const [editing, setEditing] = useState<Task | null>(null);
+  const [creating, setCreating] = useState(false);
 
   const areaName = useMemo(
     () => new Map(areas.map((a) => [a.id, a.name])),
@@ -127,10 +128,21 @@ export default function TaskList({
 
   return (
     <section>
-      <p className="font-mono text-label uppercase tracking-label text-on-surface-muted">
-        Aufgaben
-      </p>
-      <h1 className="mt-1 font-serif text-display text-on-surface">Tasks</h1>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="font-mono text-label uppercase tracking-label text-on-surface-muted">
+            Aufgaben
+          </p>
+          <h1 className="mt-1 font-serif text-display text-on-surface">Tasks</h1>
+        </div>
+        <button
+          type="button"
+          onClick={() => setCreating(true)}
+          className="mt-1 h-11 shrink-0 rounded-sm bg-on-surface px-4 font-mono text-label uppercase tracking-label text-surface transition-colors hover:bg-accent hover:text-on-accent"
+        >
+          + Neue Aufgabe
+        </button>
+      </div>
 
       <div className="mt-6 flex flex-wrap items-center gap-2">
         <Chip active={status === "open"} onClick={() => setStatus("open")}>
@@ -174,11 +186,14 @@ export default function TaskList({
         </ul>
       )}
 
-      {editing && (
+      {(creating || editing) && (
         <TaskEditor
           task={editing}
           areas={areas}
-          onClose={() => setEditing(null)}
+          onClose={() => {
+            setCreating(false);
+            setEditing(null);
+          }}
         />
       )}
     </section>
