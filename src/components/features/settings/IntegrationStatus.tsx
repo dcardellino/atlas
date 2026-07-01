@@ -7,7 +7,7 @@ import { forceSync } from "@/lib/calendar/actions";
 
 /**
  * Integrations status (TASK-046). Status badges for Supabase, Google Calendar
- * and ntfy, plus the configured timezone, last calendar sync and a force-sync
+ * and Telegram, plus the configured timezone, last calendar sync and a force-sync
  * button. Uses the semantic status tokens (success/warning/danger) — never the
  * rust accent, which is reserved for focus/star/overdue (docs/design.md).
  */
@@ -17,7 +17,7 @@ const TZ = "Europe/Berlin";
 export type IntegrationStatusData = {
   supabaseConnected: boolean;
   calendar: { connected: boolean; lastSyncedAt: string | null; error: string | null };
-  ntfyConfigured: boolean;
+  telegramConfigured: boolean;
   timezone: string;
 };
 
@@ -85,10 +85,10 @@ export default function IntegrationStatus({
           />
         </Row>
         <Row name="Google Calendar">{calendarBadge}</Row>
-        <Row name="ntfy Push">
+        <Row name="Telegram">
           <StatusBadge
-            tone={data.ntfyConfigured ? "success" : "warning"}
-            label={data.ntfyConfigured ? "Konfiguriert" : "Nicht gesetzt"}
+            tone={data.telegramConfigured ? "success" : "warning"}
+            label={data.telegramConfigured ? "Konfiguriert" : "Nicht gesetzt"}
           />
         </Row>
         <Row name="Zeitzone">

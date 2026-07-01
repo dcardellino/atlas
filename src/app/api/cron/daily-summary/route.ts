@@ -1,13 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isAuthorizedCron } from "@/lib/cron/auth";
-import { sendNtfy } from "@/lib/notify/ntfy";
+import { sendTelegram } from "@/lib/notify/telegram";
 import { dayBoundsUtc } from "@/lib/time/day";
 
 /**
- * Daily-summary cron (TASK-043, FR-009). Sends a short morning digest via ntfy —
- * how many tasks are due today and how many routines are active. Single-user
- * MVP: one ntfy topic, so counts are aggregated across the (one) user's data.
+ * Daily-summary cron (TASK-043, FR-009). Sends a short morning digest via
+ * Telegram — how many tasks are due today and how many routines are active.
+ * Single-user MVP: one chat, so counts are aggregated across the (one) user.
  * System-side admin client; secured by CRON_SECRET. Scheduled ~06:00.
  */
 export const dynamic = "force-dynamic";
@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
     `${dueCount} ${dueCount === 1 ? "Aufgabe" : "Aufgaben"} heute fällig · ` +
     `${routineCount} ${routineCount === 1 ? "Routine" : "Routinen"} aktiv`;
 
-  const ok = await sendNtfy({ title: "Guten Morgen", body, tags: ["sunrise"] });
+  const ok = await sendTelegram({ title: "🌅 Guten Morgen", body });
 
   return NextResponse.json({ sent: ok, dueCount, routineCount });
 }

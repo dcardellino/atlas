@@ -1,11 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isAuthorizedCron } from "@/lib/cron/auth";
-import { sendNtfy } from "@/lib/notify/ntfy";
+import { sendTelegram } from "@/lib/notify/telegram";
 
 /**
  * Reminder cron (TASK-042, FR-009). Finds open tasks whose `reminder_at` is due
- * and not yet notified, pushes one ntfy message each, then stamps
+ * and not yet notified, pushes one Telegram message each, then stamps
  * `reminder_sent_at` so a later run never re-sends (de-dup via 0006). Runs
  * system-side with the admin client; secured by CRON_SECRET.
  *
@@ -36,13 +36,12 @@ export async function GET(request: NextRequest) {
 
   let sent = 0;
   for (const task of due ?? []) {
-    const ok = await sendNtfy({
-      title: "Erinnerung",
+    const ok = await sendTelegram({
+      title: "🔔 Erinnerung",
       body: task.title as string,
-      tags: ["bell"],
     });
-    // Only stamp on a successful push, so a transient ntfy failure retries next
-    // run rather than silently dropping the reminder.
+    // Only stamp on a successful push, so a transient Telegram failure retries
+    // next run rather than silently dropping the reminder.
     if (ok) {
       await db
         .from("tasks")

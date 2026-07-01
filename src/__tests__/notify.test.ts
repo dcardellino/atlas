@@ -1,11 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { sendNtfy } from "@/lib/notify/ntfy";
+import { sendTelegram } from "@/lib/notify/telegram";
 import { normalizeEvent } from "@/lib/calendar/google";
 import { syncCalendarForUser } from "@/lib/calendar/sync";
 
 /**
- * Notifications + calendar sync (TASK-041/044, FR-009/FR-010): ntfy pushes,
+ * Notifications + calendar sync (TASK-041/044, FR-009/FR-010): Telegram pushes,
  * Google event normalisation, and the sync's success/failure contract — a
  * failed sync must record last_error and leave the cache untouched.
  */
@@ -14,33 +14,50 @@ function jsonResponse(body: unknown, ok = true, status = 200) {
   return { ok, status, json: async () => body } as unknown as Response;
 }
 
-describe("sendNtfy (TASK-041)", () => {
-  it("POSTs the body with Title/Tags headers and returns true", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({}));
-    const ok = await sendNtfy(
-      { title: "Erinnerung", body: "Öl checken", tags: ["bell"] },
-      "https://ntfy.sh/atlas-test",
+const CREDS = { botToken: "T", chatId: "42" };
+
+describe("sendTelegram (TASK-041)", () => {
+  it("POSTs a bold-title message to sendMessage and returns true", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ ok: true }));
+    const ok = await sendTelegram(
+      { title: "Erinnerung", body: "Öl checken" },
+      CREDS,
       fetchMock,
     );
 
     expect(ok).toBe(true);
     const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toBe("https://ntfy.sh/atlas-test");
+    expect(url).toBe("https://api.telegram.org/botT/sendMessage");
     expect(init.method).toBe("POST");
-    expect(init.body).toBe("Öl checken");
-    expect(init.headers).toMatchObject({ Title: "Erinnerung", Tags: "bell" });
+    const payload = JSON.parse(init.body);
+    expect(payload).toMatchObject({
+      chat_id: "42",
+      text: "<b>Erinnerung</b>\nÖl checken",
+      parse_mode: "HTML",
+    });
   });
 
-  it("no-ops (returns false, no fetch) when the topic URL is unset", async () => {
+  it("HTML-escapes dynamic content (no markup injection)", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ ok: true }));
+    await sendTelegram({ body: "a <b>& c" }, CREDS, fetchMock);
+    const payload = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(payload.text).toBe("a &lt;b&gt;&amp; c");
+  });
+
+  it("no-ops (returns false, no fetch) when creds are missing", async () => {
     const fetchMock = vi.fn();
-    const ok = await sendNtfy({ body: "x" }, undefined, fetchMock);
+    const ok = await sendTelegram(
+      { body: "x" },
+      { botToken: "T", chatId: "" },
+      fetchMock,
+    );
     expect(ok).toBe(false);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("returns false on a non-OK response", async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({}, false, 500));
-    const ok = await sendNtfy({ body: "x" }, "https://ntfy.sh/t", fetchMock);
+    const ok = await sendTelegram({ body: "x" }, CREDS, fetchMock);
     expect(ok).toBe(false);
   });
 });

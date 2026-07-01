@@ -5,8 +5,8 @@ import { getSyncState } from "@/lib/calendar/actions";
 import { createClient } from "@/lib/supabase/server";
 
 // Settings entry point (TASK-016, TASK-046). Token management (Phase 1) plus the
-// integrations status — Supabase / Calendar / ntfy badges, timezone, last sync
-// and a force-sync button (Phase 3, FR-010).
+// integrations status — Supabase / Calendar / Telegram badges, timezone, last
+// sync and a force-sync button (Phase 3, FR-010).
 export default async function SettingsPage() {
   const supabase = await createClient();
   const {
@@ -30,7 +30,9 @@ export default async function SettingsPage() {
             lastSyncedAt: syncState?.last_synced_at ?? null,
             error: syncState?.last_error ?? null,
           },
-          ntfyConfigured: Boolean(process.env.NTFY_TOPIC_URL),
+          telegramConfigured: Boolean(
+            process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID,
+          ),
           timezone: process.env.CAPTURE_TZ ?? "Europe/Berlin",
         }}
       />
