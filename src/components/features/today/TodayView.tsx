@@ -1,8 +1,11 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { formatInTimeZone } from "date-fns-tz";
 import { toggleComplete, setTop3, type Task } from "@/lib/tasks/actions";
+import TaskEditor, {
+  type AreaOption,
+} from "@/components/features/tasks/TaskEditor";
 import { logToday, unlogToday } from "@/lib/routines/actions";
 import type { RoutineState } from "@/lib/routines/types";
 import { StreakIndicator } from "@/components/features/routines/StreakChart";
@@ -166,10 +169,14 @@ function RecentRow({ item }: { item: RecentInboxItem }) {
 export default function TodayView({
   data,
   error,
+  areas = [],
 }: {
   data?: TodaySummary;
   error?: boolean;
+  areas?: AreaOption[];
 }) {
+  const [creating, setCreating] = useState(false);
+
   if (error || !data) {
     return (
       <section>
@@ -194,8 +201,19 @@ export default function TodayView({
 
   return (
     <section>
-      <Eyebrow>Heute</Eyebrow>
-      <h1 className="mt-1 font-serif text-display text-on-surface">Today</h1>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <Eyebrow>Heute</Eyebrow>
+          <h1 className="mt-1 font-serif text-display text-on-surface">Today</h1>
+        </div>
+        <button
+          type="button"
+          onClick={() => setCreating(true)}
+          className="mt-1 h-11 shrink-0 rounded-sm bg-on-surface px-4 font-mono text-label uppercase tracking-label text-surface transition-colors hover:bg-accent hover:text-on-accent"
+        >
+          + Neue Aufgabe
+        </button>
+      </div>
 
       {isEmpty ? (
         <p className="mt-6 text-body text-on-surface-muted">
@@ -242,6 +260,14 @@ export default function TodayView({
       )}
 
       <CalendarNotice state={data.calendarState} />
+
+      {creating && (
+        <TaskEditor
+          task={null}
+          areas={areas}
+          onClose={() => setCreating(false)}
+        />
+      )}
     </section>
   );
 }

@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { update, type Task } from "@/lib/tasks/actions";
+import { create, update, type Task } from "@/lib/tasks/actions";
 
 /**
  * Task detail/edit form (TASK-023). Edits title, notes, due_at, reminder_at,
- * area and recurrence; persists via the `update` action. Rendered as an overlay
- * by TaskList.
+ * area and recurrence. With `task` set it persists via `update`; with `task`
+ * null it creates a new task via `create` (manual, non-AI capture). Rendered as
+ * an overlay by TaskList and TodayView.
  */
 
 export type AreaOption = { id: string; name: string };
@@ -40,28 +41,35 @@ export default function TaskEditor({
   areas,
   onClose,
 }: {
-  task: Task;
+  task: Task | null;
   areas: AreaOption[];
   onClose: () => void;
 }) {
-  const [title, setTitle] = useState(task.title);
-  const [notes, setNotes] = useState(task.notes ?? "");
-  const [dueAt, setDueAt] = useState(toLocalInput(task.due_at));
-  const [reminderAt, setReminderAt] = useState(toLocalInput(task.reminder_at));
-  const [areaId, setAreaId] = useState(task.area_id ?? "");
-  const [recurrence, setRecurrence] = useState(task.recurrence ?? "");
+  const [title, setTitle] = useState(task?.title ?? "");
+  const [notes, setNotes] = useState(task?.notes ?? "");
+  const [dueAt, setDueAt] = useState(toLocalInput(task?.due_at ?? null));
+  const [reminderAt, setReminderAt] = useState(
+    toLocalInput(task?.reminder_at ?? null),
+  );
+  const [areaId, setAreaId] = useState(task?.area_id ?? "");
+  const [recurrence, setRecurrence] = useState(task?.recurrence ?? "");
   const [pending, startTransition] = useTransition();
 
   function save() {
     startTransition(async () => {
-      await update(task.id, {
+      const values = {
         title: title.trim(),
         notes: notes.trim() || null,
         due_at: fromLocalInput(dueAt),
         reminder_at: fromLocalInput(reminderAt),
         area_id: areaId || null,
         recurrence: recurrence || null,
-      });
+      };
+      if (task) {
+        await update(task.id, values);
+      } else {
+        await create(values);
+      }
       onClose();
     });
   }
@@ -75,7 +83,7 @@ export default function TaskEditor({
         className="w-full max-w-lg rounded-md border border-border bg-surface-raised p-md"
         onClick={(e) => e.stopPropagation()}
       >
-        <p className={fieldLabel}>Aufgabe bearbeiten</p>
+        <p className={fieldLabel}>{task ? "Aufgabe bearbeiten" : "Neue Aufgabe"}</p>
 
         <label className="mt-3 block">
           <span className={fieldLabel}>Titel</span>
@@ -163,7 +171,13 @@ export default function TaskEditor({
             disabled={pending || !title.trim()}
             className="h-11 rounded-sm bg-on-surface px-5 font-mono text-label uppercase tracking-label text-surface transition-colors hover:bg-accent hover:text-on-accent disabled:opacity-60"
           >
-            {pending ? "Speichern…" : "Speichern"}
+            {pending
+              ? task
+                ? "Speichern…"
+                : "Anlegen…"
+              : task
+                ? "Speichern"
+                : "Anlegen"}
           </button>
         </div>
       </div>
