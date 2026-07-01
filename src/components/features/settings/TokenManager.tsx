@@ -6,6 +6,7 @@ import {
   revokeToken,
   type TokenSummary,
 } from "@/lib/auth/actions";
+import { useToast } from "@/components/ui/Toast";
 
 /**
  * Shortcut-token management UI (TASK-016, FR-006). Create shows the plaintext
@@ -25,6 +26,7 @@ export default function TokenManager({
   const [label, setLabel] = useState("");
   const [plaintext, setPlaintext] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const { show: showToast } = useToast();
 
   function onCreate() {
     startTransition(async () => {
@@ -36,17 +38,26 @@ export default function TokenManager({
           label: label.trim() || null,
           last_used_at: null,
           created_at: new Date().toISOString(),
+          revoked_at: null,
+          expires_at: null,
         },
         ...prev,
       ]);
       setLabel("");
+      showToast("Token erzeugt");
     });
   }
 
   function onRevoke(id: string) {
     startTransition(async () => {
       await revokeToken(id);
-      setTokens((prev) => prev.filter((t) => t.id !== id));
+      // Soft-revoke: keep the row, mark it revoked (grey it out).
+      setTokens((prev) =>
+        prev.map((t) =>
+          t.id === id ? { ...t, revoked_at: new Date().toISOString() } : t,
+        ),
+      );
+      showToast("Token widerrufen");
     });
   }
 
@@ -100,27 +111,45 @@ export default function TokenManager({
         </p>
       ) : (
         <ul className="mt-4">
-          {tokens.map((t) => (
-            <li
-              key={t.id}
-              className="flex items-center gap-3 border-b border-border py-3"
-            >
-              <span className="flex-1 text-body text-on-surface">
-                {t.label ?? "Ohne Label"}
-              </span>
-              <span className="font-mono text-meta uppercase tracking-label text-on-surface-muted">
-                {t.last_used_at ? "benutzt" : "ungenutzt"}
-              </span>
-              <button
-                type="button"
-                onClick={() => onRevoke(t.id)}
-                disabled={pending}
-                className="font-mono text-meta uppercase tracking-label text-danger"
+          {tokens.map((t) => {
+            const revoked = Boolean(t.revoked_at);
+            // Expiry is enforced server-side in resolveToken; the list shows the
+            // revoked state, which is the only lifecycle change the UI triggers.
+            const state = revoked
+              ? "widerrufen"
+              : t.last_used_at
+                ? "benutzt"
+                : "ungenutzt";
+            return (
+              <li
+                key={t.id}
+                className="flex items-center gap-3 border-b border-border py-3"
               >
-                Widerrufen
-              </button>
-            </li>
-          ))}
+                <span
+                  className={`flex-1 text-body ${
+                    revoked
+                      ? "text-on-surface-muted line-through"
+                      : "text-on-surface"
+                  }`}
+                >
+                  {t.label ?? "Ohne Label"}
+                </span>
+                <span className="font-mono text-meta uppercase tracking-label text-on-surface-muted">
+                  {state}
+                </span>
+                {!revoked && (
+                  <button
+                    type="button"
+                    onClick={() => onRevoke(t.id)}
+                    disabled={pending}
+                    className="font-mono text-meta uppercase tracking-label text-danger disabled:opacity-60"
+                  >
+                    Widerrufen
+                  </button>
+                )}
+              </li>
+            );
+          })}
         </ul>
       )}
     </section>

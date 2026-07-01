@@ -28,6 +28,10 @@ import {
 } from "@/lib/areas/actions";
 import OrphanReassign from "@/components/features/areas/OrphanReassign";
 import type { Orphan } from "@/lib/areas/actions";
+import EmptyState from "@/components/ui/EmptyState";
+import { useToast } from "@/components/ui/Toast";
+import { AreaFormSchema, fieldErrors } from "@/lib/schemas/forms";
+import { useEscapeKey } from "@/lib/hooks/useEscapeKey";
 
 /**
  * Areas manager (TASK-027, FR-005). Cards with a drag-handle reorder via
@@ -134,8 +138,14 @@ function AreaEditor({
   const [color, setColor] = useState<string>(area?.color ?? AREA_COLORS[0]);
   const [icon, setIcon] = useState<string>(area?.icon ?? AREA_ICONS[0]);
   const [pending, startTransition] = useTransition();
+  const [errors, setErrors] = useState<Record<string, string> | null>(null);
+  const { show: showToast } = useToast();
+  useEscapeKey(onClose);
 
   function save() {
+    const errs = fieldErrors(AreaFormSchema, { name });
+    setErrors(errs);
+    if (errs) return;
     startTransition(async () => {
       if (area) {
         await update(area.id, { name: name.trim(), color, icon });
@@ -143,6 +153,7 @@ function AreaEditor({
         await create({ name: name.trim(), color, icon });
       }
       onClose();
+      showToast(area ? "Gespeichert" : "Bereich angelegt");
     });
   }
 
@@ -151,6 +162,7 @@ function AreaEditor({
     startTransition(async () => {
       await remove(area.id);
       onClose();
+      showToast("Bereich gelöscht");
     });
   }
 
@@ -160,6 +172,9 @@ function AreaEditor({
       onClick={onClose}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={area ? "Bereich bearbeiten" : "Neuer Bereich"}
         className="w-full max-w-lg rounded-md border border-border bg-surface-raised p-md"
         onClick={(e) => e.stopPropagation()}
       >
@@ -173,8 +188,14 @@ function AreaEditor({
             value={name}
             onChange={(e) => setName(e.target.value)}
             autoFocus
+            aria-invalid={Boolean(errors?.name)}
             className={fieldInput}
           />
+          {errors?.name && (
+            <span role="alert" className="mt-1 block text-body-sm text-danger">
+              {errors.name}
+            </span>
+          )}
         </label>
 
         <div className="mt-4">
@@ -321,9 +342,10 @@ export default function AreaManager({
       </div>
 
       {items.length === 0 ? (
-        <p className="mt-8 text-body text-on-surface-muted">
-          Noch keine Bereiche. Lege deinen ersten Lebensbereich an.
-        </p>
+        <EmptyState
+          title="Noch keine Bereiche."
+          hint="Lege deinen ersten Lebensbereich an."
+        />
       ) : (
         <DndContext
           sensors={sensors}

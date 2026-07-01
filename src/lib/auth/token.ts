@@ -26,22 +26,36 @@ export function hashToken(token: string): string {
 }
 
 /**
- * Resolve a raw bearer token to its owning user_id, or null if unknown.
- * Bumps `last_used_at` on a hit. Uses the admin client because there is no
- * session context on the token path.
+ * Outcome of resolving a bearer token. `invalid` = unknown/empty token,
+ * `revoked`/`expired` = a known token that is no longer usable — the route maps
+ * each to a 401 (with a "Token neu erzeugen" hint for revoked/expired). TASK-056.
  */
-export async function resolveToken(token: string): Promise<string | null> {
+export type TokenResult =
+  | { ok: true; userId: string }
+  | { ok: false; reason: "invalid" | "revoked" | "expired" };
+
+/**
+ * Resolve a raw bearer token to its owning user_id. Rejects tokens that have
+ * been revoked (`revoked_at`) or have expired (`expires_at < now`) with a
+ * distinct reason. Bumps `last_used_at` on a hit. Uses the admin client because
+ * there is no session context on the token path.
+ */
+export async function resolveToken(token: string): Promise<TokenResult> {
   const trimmed = token?.trim();
-  if (!trimmed) return null;
+  if (!trimmed) return { ok: false, reason: "invalid" };
 
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("api_tokens")
-    .select("id, user_id")
+    .select("id, user_id, revoked_at, expires_at")
     .eq("token_hash", hashToken(trimmed))
     .maybeSingle();
 
-  if (error || !data) return null;
+  if (error || !data) return { ok: false, reason: "invalid" };
+  if (data.revoked_at) return { ok: false, reason: "revoked" };
+  if (data.expires_at && new Date(data.expires_at).getTime() <= Date.now()) {
+    return { ok: false, reason: "expired" };
+  }
 
   // Best-effort usage timestamp; failure here must not block the capture.
   await admin
@@ -49,7 +63,7 @@ export async function resolveToken(token: string): Promise<string | null> {
     .update({ last_used_at: new Date().toISOString() })
     .eq("id", data.id);
 
-  return data.user_id;
+  return { ok: true, userId: data.user_id };
 }
 
 /** Extract a bearer token from an Authorization header, or null. */

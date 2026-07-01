@@ -4,6 +4,7 @@ import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { formatInTimeZone } from "date-fns-tz";
 import { forceSync } from "@/lib/calendar/actions";
+import { useToast } from "@/components/ui/Toast";
 
 /**
  * Integrations status (TASK-046). Status badges for Supabase, Google Calendar
@@ -62,6 +63,7 @@ export default function IntegrationStatus({
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const { show: showToast } = useToast();
 
   const calendarBadge = data.calendar.error ? (
     <StatusBadge tone="warning" label="Fehler" />
@@ -121,6 +123,7 @@ export default function IntegrationStatus({
           startTransition(async () => {
             await forceSync();
             router.refresh();
+            showToast("Kalender synchronisiert");
           })
         }
         disabled={pending}
