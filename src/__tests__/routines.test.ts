@@ -4,7 +4,14 @@ const mocks = vi.hoisted(() => ({ createClient: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: mocks.createClient }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
-import { currentStreak, lastNDays } from "@/lib/routines/streak";
+import {
+  currentStreak,
+  lastNDays,
+  isoWeekStart,
+  weeklyCount,
+  weeklyProgress,
+  weeklyStreak,
+} from "@/lib/routines/streak";
 import { logToday, listWithState, remove } from "@/lib/routines/actions";
 
 /**
@@ -100,6 +107,56 @@ describe("currentStreak (TASK-030)", () => {
       { date: "2026-06-29", done: false },
       { date: "2026-06-30", done: true },
     ]);
+  });
+});
+
+describe("weekly frequency streaks", () => {
+  // 2026-06-30 is a Tuesday → its ISO week starts Monday 2026-06-29.
+  it("isoWeekStart returns the Monday of the week", () => {
+    expect(isoWeekStart("2026-06-30")).toBe("2026-06-29"); // Tue → Mon
+    expect(isoWeekStart("2026-06-29")).toBe("2026-06-29"); // Mon → itself
+    expect(isoWeekStart("2026-07-05")).toBe("2026-06-29"); // Sun → prior Mon
+    expect(isoWeekStart("2026-07-06")).toBe("2026-07-06"); // next Mon
+  });
+
+  it("weeklyCount counts distinct days in the ISO week and ignores duplicates", () => {
+    const logs = ["2026-06-29", "2026-06-29", "2026-07-01", "2026-07-06"];
+    // Week of 2026-06-29 spans Mon 29th … Sun 5th: the 6th falls in the next week.
+    expect(weeklyCount(logs, "2026-06-29")).toBe(2);
+  });
+
+  it("weeklyProgress reports the current week's distinct days", () => {
+    const logs = ["2026-06-29", "2026-06-30"];
+    expect(weeklyProgress(logs, "2026-06-30")).toBe(2);
+  });
+
+  it("weeklyStreak counts consecutive weeks that met the target", () => {
+    const logs = [
+      // this week (of 29 Jun): 2 done, target 2 → met
+      "2026-06-29",
+      "2026-06-30",
+      // last week (of 22 Jun): 2 done → met
+      "2026-06-22",
+      "2026-06-24",
+      // two weeks ago (of 15 Jun): 1 done → misses target 2 → breaks
+      "2026-06-15",
+    ];
+    expect(weeklyStreak(logs, "2026-06-30", 2)).toBe(2);
+  });
+
+  it("weeklyStreak: an unfinished current week does not break the run", () => {
+    const logs = [
+      // current week: only 1 so far (target 2, not yet met)
+      "2026-06-30",
+      // last week: 2 → met
+      "2026-06-22",
+      "2026-06-24",
+    ];
+    expect(weeklyStreak(logs, "2026-06-30", 2)).toBe(1);
+  });
+
+  it("weeklyStreak is zero when neither this nor last week met the target", () => {
+    expect(weeklyStreak(["2026-06-30"], "2026-06-30", 2)).toBe(0);
   });
 });
 

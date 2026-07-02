@@ -38,8 +38,36 @@ describe("form schemas (TASK-052)", () => {
         name: "Mobility",
         time_of_day: "anytime",
         duration_days: "",
+        weekly_target: "",
       }),
     ).toBeNull();
+  });
+
+  it("accepts a weekly target within 1..7", () => {
+    expect(
+      fieldErrors(RoutineFormSchema, {
+        name: "Gym",
+        time_of_day: "anytime",
+        weekly_target: "4",
+      }),
+    ).toBeNull();
+  });
+
+  it("rejects an out-of-range or non-numeric weekly target", () => {
+    expect(
+      fieldErrors(RoutineFormSchema, {
+        name: "Gym",
+        time_of_day: "anytime",
+        weekly_target: "8",
+      })?.weekly_target,
+    ).toBe("1 bis 7 pro Woche.");
+    expect(
+      fieldErrors(RoutineFormSchema, {
+        name: "Gym",
+        time_of_day: "anytime",
+        weekly_target: "x",
+      })?.weekly_target,
+    ).toBe("Nur ganze Zahlen.");
   });
 
   it("rejects an empty journal body", () => {
