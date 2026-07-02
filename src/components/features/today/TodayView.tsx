@@ -1,16 +1,23 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import dynamic from "next/dynamic";
 import { formatInTimeZone } from "date-fns-tz";
 import { toggleComplete, setTop3, type Task } from "@/lib/tasks/actions";
-import TaskEditor, {
-  type AreaOption,
-} from "@/components/features/tasks/TaskEditor";
+import { type AreaOption } from "@/components/features/tasks/TaskEditor";
+
+// The editor is only mounted when the user taps "Neue Aufgabe" — code-split it
+// so it isn't in the Today initial bundle (TASK-055).
+const TaskEditor = dynamic(
+  () => import("@/components/features/tasks/TaskEditor"),
+);
 import { logToday, unlogToday } from "@/lib/routines/actions";
 import type { RoutineState } from "@/lib/routines/types";
 import { StreakIndicator } from "@/components/features/routines/StreakChart";
 import type { TodaySummary, RecentInboxItem } from "@/lib/today/summary";
 import type { CalendarEvent, CalendarState } from "@/lib/calendar/types";
+import EmptyState from "@/components/ui/EmptyState";
+import Reclassify from "@/components/features/capture/Reclassify";
 
 /**
  * Today-View UI (TASK-021). Sections: Top-3, heute fällig, kürzlich erfasst.
@@ -153,7 +160,13 @@ function CalendarNotice({ state }: { state: CalendarState }) {
   return null;
 }
 
-function RecentRow({ item }: { item: RecentInboxItem }) {
+function RecentRow({
+  item,
+  areas,
+}: {
+  item: RecentInboxItem;
+  areas: AreaOption[];
+}) {
   return (
     <li className="flex items-center gap-3 border-b border-border py-3">
       <span className="flex-1 truncate text-body-sm text-on-surface-muted">
@@ -162,6 +175,7 @@ function RecentRow({ item }: { item: RecentInboxItem }) {
       <span className="font-mono text-meta uppercase tracking-label text-on-surface-muted">
         {item.status === "failed" ? "inbox" : (item.classified_type ?? "")}
       </span>
+      <Reclassify item={item} areas={areas} />
     </li>
   );
 }
@@ -216,9 +230,10 @@ export default function TodayView({
       </div>
 
       {isEmpty ? (
-        <p className="mt-6 text-body text-on-surface-muted">
-          Noch nichts für heute. Sprich oder tippe deinen ersten Gedanken.
-        </p>
+        <EmptyState
+          title="Noch nichts für heute."
+          hint="Sprich oder tippe deinen ersten Gedanken."
+        />
       ) : (
         <>
           {data.top3.length > 0 && (
@@ -252,7 +267,7 @@ export default function TodayView({
           {data.recentInbox.length > 0 && (
             <Section title="Kürzlich erfasst">
               {data.recentInbox.map((i) => (
-                <RecentRow key={i.id} item={i} />
+                <RecentRow key={i.id} item={i} areas={areas} />
               ))}
             </Section>
           )}

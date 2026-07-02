@@ -97,7 +97,7 @@ describe("POST /api/capture (magic moment)", () => {
     mocks.serverCreateClient.mockResolvedValue({
       auth: { getUser: vi.fn().mockResolvedValue({ data: { user: null } }) },
     });
-    mocks.resolveToken.mockResolvedValue("user-1");
+    mocks.resolveToken.mockResolvedValue({ ok: true, userId: "user-1" });
     mocks.classify.mockResolvedValue({
       type: "task",
       title: "Öl checken",
@@ -165,9 +165,62 @@ describe("POST /api/capture (magic moment)", () => {
   });
 
   it("rejects a missing token with 401", async () => {
-    mocks.resolveToken.mockResolvedValue(null);
+    mocks.resolveToken.mockResolvedValue({ ok: false, reason: "invalid" });
     const res = await POST(request({ text: "x", source: "ios_shortcut" }));
     expect(res.status).toBe(401);
+  });
+
+  it("rejects an expired token with a specific 401 (TASK-056)", async () => {
+    mocks.resolveToken.mockResolvedValue({ ok: false, reason: "expired" });
+    const res = await POST(
+      request({ text: "x", source: "ios_shortcut" }, "Bearer atls_old"),
+    );
+    expect(res.status).toBe(401);
+    expect((await res.json()).error).toBe("token expired");
+  });
+
+  it("rejects a revoked token with a specific 401 (TASK-056)", async () => {
+    mocks.resolveToken.mockResolvedValue({ ok: false, reason: "revoked" });
+    const res = await POST(
+      request({ text: "x", source: "ios_shortcut" }, "Bearer atls_gone"),
+    );
+    expect(res.status).toBe(401);
+    expect((await res.json()).error).toBe("token revoked");
+  });
+
+  it("rejects an oversized capture with 400 (TASK-056)", async () => {
+    const res = await POST(
+      request(
+        { text: "x".repeat(5001), source: "ios_shortcut" },
+        "Bearer atls_test",
+      ),
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("rejects a malformed body with 400 (TASK-056)", async () => {
+    const req = new Request("http://localhost/api/capture", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer atls_test",
+      },
+      body: "not json{",
+    }) as unknown as import("next/server").NextRequest;
+    const res = await POST(req);
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 429 with a Retry-After header past the rate limit (TASK-056)", async () => {
+    mocks.resolveToken.mockResolvedValue({ ok: true, userId: "rate-user" });
+    let last!: Response;
+    for (let i = 0; i < 61; i++) {
+      last = (await POST(
+        request({ text: "spam", source: "ios_shortcut" }, "Bearer atls_test"),
+      )) as unknown as Response;
+    }
+    expect(last.status).toBe(429);
+    expect(last.headers.get("Retry-After")).toBe("60");
   });
 
   it("falls back to a 207 inbox note when classification fails", async () => {

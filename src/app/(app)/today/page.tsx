@@ -11,20 +11,22 @@ export default async function TodayPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  let data: TodaySummary | undefined;
-  try {
-    data = await summary();
-  } catch {
-    data = undefined;
-  }
-
-  const areasRes = user
-    ? await supabase
-        .from("areas")
-        .select("id, name")
-        .eq("user_id", user.id)
-        .order("sort_order", { ascending: true })
-    : { data: [] as { id: string; name: string }[] };
+  // Fetch the summary and the areas concurrently — they're independent, so there's
+  // no reason to serialize the two round-trips on the Today critical path (TASK-055).
+  const [summaryResult, areasRes] = await Promise.all([
+    summary().then(
+      (d) => ({ data: d as TodaySummary | undefined }),
+      () => ({ data: undefined }),
+    ),
+    user
+      ? supabase
+          .from("areas")
+          .select("id, name")
+          .eq("user_id", user.id)
+          .order("sort_order", { ascending: true })
+      : Promise.resolve({ data: [] as { id: string; name: string }[] }),
+  ]);
+  const data = summaryResult.data;
   const areas = areasRes.data ?? [];
 
   return data ? (

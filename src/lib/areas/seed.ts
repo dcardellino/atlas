@@ -17,6 +17,12 @@ export const DEFAULT_AREAS = [
   },
 ] as const;
 
+// Per-instance memo of users already confirmed to have areas. Keeps
+// seedDefaultAreas off the per-request critical path (TASK-055): after the first
+// navigation on a warm instance we skip the existence query entirely. It only
+// caches the "areas present" fact, so nothing stale is served.
+const ensured = new Set<string>();
+
 /**
  * Idempotently ensure the signed-in user has their default areas. No-op if any
  * areas already exist, so it is safe to call on every authenticated request.
@@ -29,13 +35,18 @@ export async function seedDefaultAreas(): Promise<void> {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return;
+  if (ensured.has(user.id)) return;
 
   const { count, error } = await supabase
     .from("areas")
     .select("id", { count: "exact", head: true })
     .eq("user_id", user.id);
 
-  if (error || (count ?? 0) > 0) return;
+  if (error) return;
+  if ((count ?? 0) > 0) {
+    ensured.add(user.id);
+    return;
+  }
 
   await supabase.from("areas").insert(
     DEFAULT_AREAS.map((area, index) => ({
@@ -47,4 +58,5 @@ export async function seedDefaultAreas(): Promise<void> {
       sort_order: index,
     })),
   );
+  ensured.add(user.id);
 }

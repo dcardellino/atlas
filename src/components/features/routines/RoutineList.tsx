@@ -17,6 +17,10 @@ import {
 import StreakChart from "@/components/features/routines/StreakChart";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import type { AreaOption } from "@/components/features/tasks/TaskEditor";
+import EmptyState from "@/components/ui/EmptyState";
+import { useToast } from "@/components/ui/Toast";
+import { RoutineFormSchema, fieldErrors } from "@/lib/schemas/forms";
+import { useEscapeKey } from "@/lib/hooks/useEscapeKey";
 
 /**
  * Routines UI (TASK-032, FR-007 / Vision Flow 3). Grouped by time of day with a
@@ -119,8 +123,20 @@ function RoutineEditor({
   const [areaId, setAreaId] = useState(routine?.area_id ?? "");
   const [confirming, setConfirming] = useState(false);
   const [pending, startTransition] = useTransition();
+  const [errors, setErrors] = useState<Record<string, string> | null>(null);
+  const { show: showToast } = useToast();
+  useEscapeKey(onClose);
 
   function save() {
+    const errs = fieldErrors(RoutineFormSchema, {
+      name,
+      description,
+      time_of_day: timeOfDay,
+      specific_time: specificTime,
+      duration_days: durationDays,
+    });
+    setErrors(errs);
+    if (errs) return;
     const patch = {
       name: name.trim(),
       description: description.trim() || null,
@@ -134,6 +150,7 @@ function RoutineEditor({
       if (routine) await update(routine.id, patch);
       else await create(patch);
       onClose();
+      showToast(routine ? "Gespeichert" : "Routine angelegt");
     });
   }
 
@@ -142,6 +159,7 @@ function RoutineEditor({
     startTransition(async () => {
       await remove(routine.id);
       onClose();
+      showToast("Routine gelöscht");
     });
   }
 
@@ -152,6 +170,9 @@ function RoutineEditor({
       onClick={onClose}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={routine ? "Routine bearbeiten" : "Neue Routine"}
         className="w-full max-w-lg rounded-md border border-border bg-surface-raised p-md"
         onClick={(e) => e.stopPropagation()}
       >
@@ -165,8 +186,14 @@ function RoutineEditor({
             value={name}
             onChange={(e) => setName(e.target.value)}
             autoFocus
+            aria-invalid={Boolean(errors?.name)}
             className={fieldInput}
           />
+          {errors?.name && (
+            <span role="alert" className="mt-1 block text-body-sm text-danger">
+              {errors.name}
+            </span>
+          )}
         </label>
 
         <label className="mt-3 block">
@@ -200,8 +227,14 @@ function RoutineEditor({
               type="time"
               value={specificTime}
               onChange={(e) => setSpecificTime(e.target.value)}
+              aria-invalid={Boolean(errors?.specific_time)}
               className={`${fieldInput} min-h-[42px] appearance-none text-left`}
             />
+            {errors?.specific_time && (
+              <span role="alert" className="mt-1 block text-body-sm text-danger">
+                {errors.specific_time}
+              </span>
+            )}
           </label>
         </div>
 
@@ -230,8 +263,14 @@ function RoutineEditor({
               placeholder="∞"
               value={durationDays}
               onChange={(e) => setDurationDays(e.target.value)}
+              aria-invalid={Boolean(errors?.duration_days)}
               className={fieldInput}
             />
+            {errors?.duration_days && (
+              <span role="alert" className="mt-1 block text-body-sm text-danger">
+                {errors.duration_days}
+              </span>
+            )}
           </label>
         </div>
 
@@ -324,9 +363,10 @@ export default function RoutineList({
       </div>
 
       {routines.length === 0 ? (
-        <p className="mt-8 text-body text-on-surface-muted">
-          Noch keine Routinen. Lege deine erste Gewohnheit an.
-        </p>
+        <EmptyState
+          title="Noch keine Routinen."
+          hint="Lege deine erste Gewohnheit an."
+        />
       ) : (
         TIMES_OF_DAY.map((tod) => {
           const group = routines.filter((r) => r.routine.time_of_day === tod);

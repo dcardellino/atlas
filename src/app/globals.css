@@ -78,4 +78,16 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+
+  /*
+   * Visible keyboard focus everywhere (TASK-054, WCAG 2.4.7). A warm rust ring —
+   * the one place the accent marks focus (docs/design.md). Only for keyboard
+   * focus (:focus-visible), so pointer clicks stay quiet. Inputs opt out with the
+   * `outline-none` utility and show their rust focus-underline/border instead.
+   */
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
 }

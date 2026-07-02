@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useToast } from "@/components/ui/Toast";
 
 /**
  * Quick-capture overlay (TASK-019). Large textarea + mic (Web Speech API with a
@@ -39,11 +40,11 @@ function getRecognition(): SpeechRecognitionLike | null {
 }
 
 export default function QuickCapture() {
+  const { show: showToast } = useToast();
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
   const [pending, setPending] = useState(false);
   const [recording, setRecording] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
@@ -127,10 +128,9 @@ export default function QuickCapture() {
         data.type === "note" || res.status === 207
           ? "In Inbox abgelegt"
           : `Erfasst${area}`;
-      setToast(label);
       usedVoice.current = false;
       close();
-      window.setTimeout(() => setToast(null), 4000);
+      showToast(label);
     } catch {
       setError("Konnte nicht erfassen — kurz prüfen?");
     } finally {
@@ -157,21 +157,15 @@ export default function QuickCapture() {
         +
       </button>
 
-      {toast && (
-        <div
-          role="status"
-          className="fixed bottom-24 left-1/2 z-30 -translate-x-1/2 rounded-sm border border-border bg-surface-raised px-4 py-2 font-mono text-meta uppercase tracking-label text-on-surface"
-        >
-          {toast}
-        </div>
-      )}
-
       {open && (
         <div
           className="fixed inset-0 z-40 flex items-start justify-center bg-on-surface/30 px-4 pt-24"
           onClick={close}
         >
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Schnell erfassen"
             className="w-full max-w-lg rounded-md border border-border bg-surface-raised p-md"
             onClick={(e) => e.stopPropagation()}
           >
