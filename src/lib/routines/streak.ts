@@ -37,6 +37,64 @@ export function currentStreak(logDates: string[], today: string): number {
 }
 
 /**
+ * Monday (ISO week start) of the week containing `date`. UTC-anchored via
+ * `getUTCDay()` (0 = Sunday … 6 = Saturday); `(day + 6) % 7` is the number of
+ * days since Monday.
+ */
+export function isoWeekStart(date: string): string {
+  const [y, m, d] = date.split("-").map(Number);
+  const day = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+  const offset = (day + 6) % 7;
+  return addDaysIso(date, -offset);
+}
+
+/**
+ * Number of *distinct* logged days inside the ISO week `[weekStart, weekStart+6]`.
+ * Duplicate log dates count once; the check-off boolean of a gym-style routine is
+ * "did it happen that day", so multiple logs on one day are still one day.
+ */
+export function weeklyCount(logDates: string[], weekStart: string): number {
+  const end = addDaysIso(weekStart, 6);
+  const seen = new Set<string>();
+  for (const d of logDates) {
+    if (d >= weekStart && d <= end) seen.add(d);
+  }
+  return seen.size;
+}
+
+/** Distinct logged days in the week containing `today` (drives "3/4 diese Woche"). */
+export function weeklyProgress(logDates: string[], today: string): number {
+  return weeklyCount(logDates, isoWeekStart(today));
+}
+
+/**
+ * Weekly streak: consecutive weeks that met `target` check-offs, ending at the
+ * current week (or, if the running week hasn't hit the target yet, ending at the
+ * previous week — an unfinished week doesn't break an otherwise-active streak,
+ * mirroring {@link currentStreak}).
+ */
+export function weeklyStreak(
+  logDates: string[],
+  today: string,
+  target: number,
+): number {
+  if (target <= 0) return 0;
+
+  let cursor = isoWeekStart(today);
+  if (weeklyCount(logDates, cursor) < target) {
+    cursor = addDaysIso(cursor, -7);
+    if (weeklyCount(logDates, cursor) < target) return 0;
+  }
+
+  let count = 0;
+  while (weeklyCount(logDates, cursor) >= target) {
+    count++;
+    cursor = addDaysIso(cursor, -7);
+  }
+  return count;
+}
+
+/**
  * The last `days` calendar dates ending at `today`, oldest → newest, each tagged
  * with whether the routine was logged that day. Drives StreakChart (TASK-034).
  */

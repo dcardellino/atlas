@@ -45,7 +45,7 @@ function RoutineRow({
   onEdit: () => void;
 }) {
   const [pending, startTransition] = useTransition();
-  const { routine, loggedToday, streak, last30 } = state;
+  const { routine, loggedToday, streak, last30, weeklyProgress } = state;
 
   return (
     <li className="flex items-start gap-3 border-b border-border py-3">
@@ -87,7 +87,11 @@ function RoutineRow({
           )}
         </button>
         <div className="mt-2">
-          <StreakChart days={last30} streak={streak} />
+          <StreakChart
+            days={last30}
+            streak={streak}
+            weeklyProgress={weeklyProgress}
+          />
         </div>
       </div>
     </li>
@@ -119,6 +123,12 @@ function RoutineEditor({
   const [durationDays, setDurationDays] = useState(
     routine?.duration_days != null ? String(routine.duration_days) : "",
   );
+  const [frequency, setFrequency] = useState<"daily" | "weekly">(
+    routine?.weekly_target != null ? "weekly" : "daily",
+  );
+  const [weeklyTarget, setWeeklyTarget] = useState(
+    routine?.weekly_target != null ? String(routine.weekly_target) : "4",
+  );
   const [notify, setNotify] = useState(routine?.notify ?? false);
   const [areaId, setAreaId] = useState(routine?.area_id ?? "");
   const [confirming, setConfirming] = useState(false);
@@ -134,6 +144,7 @@ function RoutineEditor({
       time_of_day: timeOfDay,
       specific_time: specificTime,
       duration_days: durationDays,
+      weekly_target: frequency === "weekly" ? weeklyTarget : "",
     });
     setErrors(errs);
     if (errs) return;
@@ -143,6 +154,7 @@ function RoutineEditor({
       time_of_day: timeOfDay,
       specific_time: specificTime || null,
       duration_days: durationDays ? Number(durationDays) : null,
+      weekly_target: frequency === "weekly" ? Number(weeklyTarget) : null,
       notify,
       area_id: areaId || null,
     };
@@ -272,6 +284,45 @@ function RoutineEditor({
               </span>
             )}
           </label>
+        </div>
+
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          <label className="block">
+            <span className={fieldLabel}>Frequenz</span>
+            <select
+              value={frequency}
+              onChange={(e) =>
+                setFrequency(e.target.value as "daily" | "weekly")
+              }
+              className={fieldInput}
+            >
+              <option value="daily">Täglich</option>
+              <option value="weekly">X-mal pro Woche</option>
+            </select>
+          </label>
+          {frequency === "weekly" && (
+            <label className="block">
+              <span className={fieldLabel}>Mal pro Woche</span>
+              <input
+                type="number"
+                min={1}
+                max={7}
+                inputMode="numeric"
+                value={weeklyTarget}
+                onChange={(e) => setWeeklyTarget(e.target.value)}
+                aria-invalid={Boolean(errors?.weekly_target)}
+                className={fieldInput}
+              />
+              {errors?.weekly_target && (
+                <span
+                  role="alert"
+                  className="mt-1 block text-body-sm text-danger"
+                >
+                  {errors.weekly_target}
+                </span>
+              )}
+            </label>
+          )}
         </div>
 
         <label className="mt-4 flex items-center gap-2">

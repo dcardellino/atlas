@@ -13,7 +13,10 @@ const TaskEditor = dynamic(
 );
 import { logToday, unlogToday } from "@/lib/routines/actions";
 import type { RoutineState } from "@/lib/routines/types";
-import { StreakIndicator } from "@/components/features/routines/StreakChart";
+import {
+  StreakIndicator,
+  WeeklyProgress,
+} from "@/components/features/routines/StreakChart";
 import type { TodaySummary, RecentInboxItem } from "@/lib/today/summary";
 import type { CalendarEvent, CalendarState } from "@/lib/calendar/types";
 import EmptyState from "@/components/ui/EmptyState";
@@ -72,7 +75,7 @@ function TaskRow({ task }: { task: Task }) {
 
 function RoutineRow({ state }: { state: RoutineState }) {
   const [pending, startTransition] = useTransition();
-  const { routine, loggedToday, streak } = state;
+  const { routine, loggedToday, streak, weeklyProgress } = state;
   return (
     <li className="flex items-center gap-3 border-b border-border py-3">
       <button
@@ -98,7 +101,16 @@ function RoutineRow({ state }: { state: RoutineState }) {
       >
         {routine.name}
       </span>
-      <StreakIndicator streak={streak} />
+      {weeklyProgress && (
+        <WeeklyProgress
+          done={weeklyProgress.done}
+          target={weeklyProgress.target}
+        />
+      )}
+      <StreakIndicator
+        streak={streak}
+        unit={weeklyProgress ? "Wochen" : "Tage"}
+      />
     </li>
   );
 }
