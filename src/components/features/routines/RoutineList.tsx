@@ -7,6 +7,7 @@ import {
   remove,
   logToday,
   unlogToday,
+  setTodayCount,
 } from "@/lib/routines/actions";
 import {
   TIMES_OF_DAY,
@@ -15,6 +16,7 @@ import {
   type TimeOfDay,
 } from "@/lib/routines/types";
 import StreakChart from "@/components/features/routines/StreakChart";
+import { nextCount } from "@/lib/routines/streak";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import type { AreaOption } from "@/components/features/tasks/TaskEditor";
 import EmptyState from "@/components/ui/EmptyState";
@@ -45,25 +47,43 @@ function RoutineRow({
   onEdit: () => void;
 }) {
   const [pending, startTransition] = useTransition();
-  const { routine, loggedToday, streak, last30, weeklyProgress } = state;
+  const { routine, loggedToday, streak, last30, weeklyProgress, dailyProgress } =
+    state;
+  const counted = dailyProgress != null;
 
   return (
     <li className="flex items-start gap-3 border-b border-border py-3">
       <button
         type="button"
-        aria-label={loggedToday ? "Abhaken rückgängig" : "Heute abhaken"}
+        aria-label={
+          counted
+            ? `Heute abhaken, ${dailyProgress.done} von ${dailyProgress.target}`
+            : loggedToday
+              ? "Abhaken rückgängig"
+              : "Heute abhaken"
+        }
         aria-pressed={loggedToday}
         disabled={pending}
         onClick={() =>
           startTransition(() =>
-            loggedToday ? unlogToday(routine.id) : logToday(routine.id),
+            counted
+              ? setTodayCount(routine.id, nextCount(dailyProgress))
+              : loggedToday
+                ? unlogToday(routine.id)
+                : logToday(routine.id),
           )
         }
         className={`mt-[2px] flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-sm border border-border text-[11px] leading-none ${
           loggedToday ? "bg-on-surface text-surface" : "bg-surface"
         }`}
       >
-        {loggedToday ? "✓" : ""}
+        {counted
+          ? loggedToday
+            ? "✓"
+            : String(dailyProgress.done)
+          : loggedToday
+            ? "✓"
+            : ""}
       </button>
 
       <div className="min-w-0 flex-1">
@@ -86,6 +106,7 @@ function RoutineRow({
             days={last30}
             streak={streak}
             weeklyProgress={weeklyProgress}
+            dailyProgress={dailyProgress}
           />
         </div>
       </div>
@@ -115,11 +136,18 @@ function RoutineEditor({
   const [durationDays, setDurationDays] = useState(
     routine?.duration_days != null ? String(routine.duration_days) : "",
   );
-  const [frequency, setFrequency] = useState<"daily" | "weekly">(
-    routine?.weekly_target != null ? "weekly" : "daily",
+  const [frequency, setFrequency] = useState<"daily" | "perDay" | "perWeek">(
+    routine?.daily_target != null
+      ? "perDay"
+      : routine?.weekly_target != null
+        ? "perWeek"
+        : "daily",
   );
   const [weeklyTarget, setWeeklyTarget] = useState(
     routine?.weekly_target != null ? String(routine.weekly_target) : "4",
+  );
+  const [dailyTarget, setDailyTarget] = useState(
+    routine?.daily_target != null ? String(routine.daily_target) : "3",
   );
   const [areaId, setAreaId] = useState(routine?.area_id ?? "");
   const [confirming, setConfirming] = useState(false);
@@ -134,7 +162,8 @@ function RoutineEditor({
       description,
       time_of_day: timeOfDay,
       duration_days: durationDays,
-      weekly_target: frequency === "weekly" ? weeklyTarget : "",
+      weekly_target: frequency === "perWeek" ? weeklyTarget : "",
+      daily_target: frequency === "perDay" ? dailyTarget : "",
     });
     setErrors(errs);
     if (errs) return;
@@ -143,7 +172,8 @@ function RoutineEditor({
       description: description.trim() || null,
       time_of_day: timeOfDay,
       duration_days: durationDays ? Number(durationDays) : null,
-      weekly_target: frequency === "weekly" ? Number(weeklyTarget) : null,
+      weekly_target: frequency === "perWeek" ? Number(weeklyTarget) : null,
+      daily_target: frequency === "perDay" ? Number(dailyTarget) : null,
       area_id: areaId || null,
     };
     startTransition(async () => {
@@ -265,15 +295,41 @@ function RoutineEditor({
             <select
               value={frequency}
               onChange={(e) =>
-                setFrequency(e.target.value as "daily" | "weekly")
+                setFrequency(
+                  e.target.value as "daily" | "perDay" | "perWeek",
+                )
               }
               className={fieldInput}
             >
               <option value="daily">Täglich</option>
-              <option value="weekly">X-mal pro Woche</option>
+              <option value="perDay">X-mal pro Tag</option>
+              <option value="perWeek">X-mal pro Woche</option>
             </select>
           </label>
-          {frequency === "weekly" && (
+          {frequency === "perDay" && (
+            <label className="block">
+              <span className={fieldLabel}>Mal pro Tag</span>
+              <input
+                type="number"
+                min={2}
+                max={20}
+                inputMode="numeric"
+                value={dailyTarget}
+                onChange={(e) => setDailyTarget(e.target.value)}
+                aria-invalid={Boolean(errors?.daily_target)}
+                className={fieldInput}
+              />
+              {errors?.daily_target && (
+                <span
+                  role="alert"
+                  className="mt-1 block text-body-sm text-danger"
+                >
+                  {errors.daily_target}
+                </span>
+              )}
+            </label>
+          )}
+          {frequency === "perWeek" && (
             <label className="block">
               <span className={fieldLabel}>Mal pro Woche</span>
               <input

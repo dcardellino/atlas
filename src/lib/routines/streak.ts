@@ -95,6 +95,33 @@ export function weeklyStreak(
 }
 
 /**
+ * The dates whose per-day count reached `target` — the "done" days of an
+ * N-times-per-day routine. Feeding these into {@link currentStreak} /
+ * {@link lastNDays} reuses the daily-streak logic: a day only counts once its
+ * target is met, and an unfinished today doesn't break the streak.
+ */
+export function daysMeetingTarget(
+  logs: { date: string; count: number }[],
+  target: number,
+): string[] {
+  return logs.filter((l) => l.count >= target).map((l) => l.date);
+}
+
+/**
+ * The next check-off value for an N-times-per-day routine: +1 until the target is
+ * reached, then wrap back to 0 (the "tap to correct" affordance).
+ */
+export function nextCount({
+  done,
+  target,
+}: {
+  done: number;
+  target: number;
+}): number {
+  return done >= target ? 0 : done + 1;
+}
+
+/**
  * The last `days` calendar dates ending at `today`, oldest → newest, each tagged
  * with whether the routine was logged that day. Drives StreakChart (TASK-034).
  */

@@ -58,6 +58,13 @@ export const RoutineFormSchema = z.object({
     .refine((v) => Number(v) >= 1 && Number(v) <= 7, "1 bis 7 pro Woche.")
     .optional()
     .or(z.literal("").transform(() => undefined)),
+  // Target check-offs per day (2..20), or empty when not an N-times-per-day routine.
+  daily_target: z
+    .string()
+    .regex(/^\d+$/, "Nur ganze Zahlen.")
+    .refine((v) => Number(v) >= 2 && Number(v) <= 20, "2 bis 20 pro Tag.")
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
 });
 
 export const JournalFormSchema = z.object({

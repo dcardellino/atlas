@@ -47,15 +47,36 @@ export function WeeklyProgress({
   );
 }
 
+/** Today's progress for an N-times-per-day routine, e.g. "2/3 heute". */
+export function DailyProgress({
+  done,
+  target,
+}: {
+  done: number;
+  target: number;
+}) {
+  return (
+    <span
+      className="font-mono text-meta uppercase tracking-label text-on-surface-muted"
+      aria-label={`${done} von ${target} heute`}
+    >
+      {done}/{target} heute
+    </span>
+  );
+}
+
 export default function StreakChart({
   days,
   streak,
   weeklyProgress,
+  dailyProgress,
 }: {
   days: { date: string; done: boolean }[];
   streak?: number;
   /** Present for weekly routines → shows "N/target diese Woche" + week streak. */
   weeklyProgress?: { done: number; target: number } | null;
+  /** Present for N-times-per-day routines → shows "N/target heute" + day streak. */
+  dailyProgress?: { done: number; target: number } | null;
 }) {
   const weekly = weeklyProgress != null;
   return (
@@ -75,6 +96,12 @@ export default function StreakChart({
         <WeeklyProgress
           done={weeklyProgress.done}
           target={weeklyProgress.target}
+        />
+      )}
+      {dailyProgress != null && (
+        <DailyProgress
+          done={dailyProgress.done}
+          target={dailyProgress.target}
         />
       )}
       {streak !== undefined && (

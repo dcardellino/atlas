@@ -70,6 +70,40 @@ describe("form schemas (TASK-052)", () => {
     ).toBe("Nur ganze Zahlen.");
   });
 
+  it("accepts a daily target within 2..20", () => {
+    expect(
+      fieldErrors(RoutineFormSchema, {
+        name: "Wasser",
+        time_of_day: "anytime",
+        daily_target: "3",
+      }),
+    ).toBeNull();
+  });
+
+  it("rejects an out-of-range or non-numeric daily target", () => {
+    expect(
+      fieldErrors(RoutineFormSchema, {
+        name: "Wasser",
+        time_of_day: "anytime",
+        daily_target: "1",
+      })?.daily_target,
+    ).toBe("2 bis 20 pro Tag.");
+    expect(
+      fieldErrors(RoutineFormSchema, {
+        name: "Wasser",
+        time_of_day: "anytime",
+        daily_target: "21",
+      })?.daily_target,
+    ).toBe("2 bis 20 pro Tag.");
+    expect(
+      fieldErrors(RoutineFormSchema, {
+        name: "Wasser",
+        time_of_day: "anytime",
+        daily_target: "x",
+      })?.daily_target,
+    ).toBe("Nur ganze Zahlen.");
+  });
+
   it("rejects an empty journal body", () => {
     expect(fieldErrors(JournalFormSchema, { body: "  " })).toEqual({
       body: "Schreib oder sprich zuerst etwas.",

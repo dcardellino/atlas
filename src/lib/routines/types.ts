@@ -21,6 +21,8 @@ export type Routine = {
   duration_days: number | null;
   /** null = daily routine; 1..7 = target check-offs per ISO week ("N-mal/Woche"). */
   weekly_target: number | null;
+  /** null = not per-day; 2..20 = target check-offs per day ("N-mal/Tag"). Exclusive with weekly_target. */
+  daily_target: number | null;
   start_date: string;
   archived_at: string | null;
   created_at: string;
@@ -31,6 +33,8 @@ export type RoutineLog = {
   routine_id: string;
   log_date: string;
   completed: boolean;
+  /** Check-offs on that day (≥1); relevant for N-times-per-day routines. */
+  count: number;
   created_at: string;
 };
 
@@ -43,4 +47,6 @@ export type RoutineState = {
   last30: { date: string; done: boolean }[];
   /** Current-week progress for weekly routines; null for daily ones. */
   weeklyProgress: { done: number; target: number } | null;
+  /** Today's progress for N-times-per-day routines; null otherwise. */
+  dailyProgress: { done: number; target: number } | null;
 };
