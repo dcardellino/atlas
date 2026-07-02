@@ -18,8 +18,6 @@ export type Routine = {
   name: string;
   description: string | null;
   time_of_day: TimeOfDay;
-  specific_time: string | null;
-  notify: boolean;
   duration_days: number | null;
   start_date: string;
   archived_at: string | null;

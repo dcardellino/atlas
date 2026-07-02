@@ -23,14 +23,12 @@ describe("form schemas (TASK-052)", () => {
     });
   });
 
-  it("rejects a malformed routine time and non-positive duration", () => {
+  it("rejects a non-positive routine duration", () => {
     const errs = fieldErrors(RoutineFormSchema, {
       name: "Mobility",
       time_of_day: "morning",
-      specific_time: "25:99",
       duration_days: "0",
     });
-    expect(errs?.specific_time).toBe("Ungültige Uhrzeit.");
     expect(errs?.duration_days).toBe("Mindestens 1 Tag.");
   });
 
@@ -39,7 +37,6 @@ describe("form schemas (TASK-052)", () => {
       fieldErrors(RoutineFormSchema, {
         name: "Mobility",
         time_of_day: "anytime",
-        specific_time: "",
         duration_days: "",
       }),
     ).toBeNull();

@@ -44,13 +44,6 @@ export const RoutineFormSchema = z.object({
   name: requiredName,
   description: optionalText(DESCRIPTION_MAX),
   time_of_day: z.enum(TIMES_OF_DAY),
-  // "HH:MM" from <input type="time">, or empty.
-  specific_time: z
-    .string()
-    .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Ungültige Uhrzeit.")
-    .optional()
-    .or(z.literal("").transform(() => undefined)),
-  // Positive whole number of days, or empty for an open-ended routine.
   duration_days: z
     .string()
     .regex(/^\d+$/, "Nur ganze Tage.")

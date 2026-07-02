@@ -47,8 +47,6 @@ export async function create(input: {
   name: string;
   description?: string | null;
   time_of_day?: TimeOfDay;
-  specific_time?: string | null;
-  notify?: boolean;
   duration_days?: number | null;
   area_id?: string | null;
 }): Promise<Routine> {
@@ -60,8 +58,6 @@ export async function create(input: {
       name: input.name.trim(),
       description: input.description ?? null,
       time_of_day: input.time_of_day ?? "anytime",
-      specific_time: input.specific_time ?? null,
-      notify: input.notify ?? false,
       duration_days: input.duration_days ?? null,
       area_id: input.area_id ?? null,
     })
@@ -79,13 +75,7 @@ export async function update(
   patch: Partial<
     Pick<
       Routine,
-      | "name"
-      | "description"
-      | "time_of_day"
-      | "specific_time"
-      | "notify"
-      | "duration_days"
-      | "area_id"
+      "name" | "description" | "time_of_day" | "duration_days" | "area_id"
     >
   >,
 ): Promise<void> {
@@ -193,7 +183,6 @@ export async function listWithState(
       .select("*")
       .eq("user_id", userId)
       .is("archived_at", null)
-      .order("specific_time", { ascending: true, nullsFirst: true })
       .order("created_at", { ascending: true }),
     supabase
       .from("routine_logs")
