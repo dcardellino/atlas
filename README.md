@@ -102,7 +102,7 @@ unreliable (delayed / skipped under load), so **Supabase Cron** (`pg_cron` +
 `pg_net`) drives the routes straight from the database
 (`supabase/migrations/0009_supabase_cron.sql`), authenticated with `CRON_SECRET`:
 
-- `/api/cron/reminders` — every 15 min, sends due task reminders via Telegram
+- `/api/cron/reminders` — every minute, sends due task reminders via Telegram
 - `/api/cron/calendar-sync` — every 15 min, refreshes the read-only calendar cache
 - `/api/cron/daily-summary` — 05:00 UTC (~06:00 Europe/Berlin), sends the day's overview
 
