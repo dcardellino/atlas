@@ -11,8 +11,15 @@ import {
   weeklyCount,
   weeklyProgress,
   weeklyStreak,
+  daysMeetingTarget,
+  nextCount,
 } from "@/lib/routines/streak";
-import { logToday, listWithState, remove } from "@/lib/routines/actions";
+import {
+  logToday,
+  listWithState,
+  remove,
+  setTodayCount,
+} from "@/lib/routines/actions";
 
 /**
  * Routines actions + streak (TASK-029/030/031, FR-007): pure streak edges,
@@ -160,6 +167,23 @@ describe("weekly frequency streaks", () => {
   });
 });
 
+describe("N-times-per-day helpers", () => {
+  it("daysMeetingTarget keeps only days whose count reached the target", () => {
+    const logs = [
+      { date: "2026-06-30", count: 2 },
+      { date: "2026-06-29", count: 3 },
+      { date: "2026-06-28", count: 5 },
+    ];
+    expect(daysMeetingTarget(logs, 3)).toEqual(["2026-06-29", "2026-06-28"]);
+  });
+
+  it("nextCount increments up to the target then wraps to 0", () => {
+    expect(nextCount({ done: 0, target: 3 })).toBe(1);
+    expect(nextCount({ done: 2, target: 3 })).toBe(3);
+    expect(nextCount({ done: 3, target: 3 })).toBe(0);
+  });
+});
+
 describe("routines actions (TASK-029/031)", () => {
   beforeEach(() => vi.clearAllMocks());
 
@@ -242,5 +266,74 @@ describe("routines actions (TASK-029/031)", () => {
     expect(states[0].loggedToday).toBe(true);
     expect(states[0].streak).toBe(2);
     expect(states[0].last30).toHaveLength(30);
+  });
+
+  it("setTodayCount upserts the day's count (updates on conflict, no ignoreDuplicates)", async () => {
+    const { client, upserts } = makeClient();
+    mocks.createClient.mockResolvedValue(client);
+
+    await setTodayCount("r1", 2, NOW, TZ);
+
+    const up = upserts.find((u) => u.table === "routine_logs");
+    expect(up?.values).toMatchObject({
+      user_id: "u1",
+      routine_id: "r1",
+      log_date: "2026-06-30",
+      count: 2,
+    });
+    expect(up?.options).toMatchObject({ onConflict: "routine_id,log_date" });
+    expect(
+      (up?.options as { ignoreDuplicates?: boolean }).ignoreDuplicates,
+    ).toBeUndefined();
+  });
+
+  it("setTodayCount deletes today's row when count is zero", async () => {
+    const { client, deletes, upserts } = makeClient();
+    mocks.createClient.mockResolvedValue(client);
+
+    await setTodayCount("r1", 0, NOW, TZ);
+
+    expect(upserts).toHaveLength(0);
+    const del = deletes.find((d) => d.table === "routine_logs");
+    expect(del?.filters).toMatchObject({
+      user_id: "u1",
+      routine_id: "r1",
+      log_date: "2026-06-30",
+    });
+  });
+
+  it("listWithState computes daily progress + streak for an N/day routine", async () => {
+    const { client } = makeClient({
+      tableData: {
+        routines: [
+          {
+            id: "r-water",
+            area_id: null,
+            name: "Wasser",
+            time_of_day: "anytime",
+            duration_days: null,
+            weekly_target: null,
+            daily_target: 3,
+            start_date: "2026-06-01",
+            archived_at: null,
+            created_at: "2026-06-01T00:00:00Z",
+          },
+        ],
+        routine_logs: [
+          { routine_id: "r-water", log_date: "2026-06-30", count: 2 }, // today, not yet met
+          { routine_id: "r-water", log_date: "2026-06-29", count: 3 }, // met
+          { routine_id: "r-water", log_date: "2026-06-28", count: 4 }, // met
+        ],
+      },
+    });
+    mocks.createClient.mockResolvedValue(client);
+
+    const [state] = await listWithState(NOW, TZ);
+
+    // Today has 2/3 → not done; streak counts the two prior met days.
+    expect(state.dailyProgress).toEqual({ done: 2, target: 3 });
+    expect(state.loggedToday).toBe(false);
+    expect(state.streak).toBe(2);
+    expect(state.weeklyProgress).toBeNull();
   });
 });

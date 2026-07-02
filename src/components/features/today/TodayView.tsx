@@ -11,11 +11,13 @@ import { type AreaOption } from "@/components/features/tasks/TaskEditor";
 const TaskEditor = dynamic(
   () => import("@/components/features/tasks/TaskEditor"),
 );
-import { logToday, unlogToday } from "@/lib/routines/actions";
+import { logToday, unlogToday, setTodayCount } from "@/lib/routines/actions";
+import { nextCount } from "@/lib/routines/streak";
 import type { RoutineState } from "@/lib/routines/types";
 import {
   StreakIndicator,
   WeeklyProgress,
+  DailyProgress,
 } from "@/components/features/routines/StreakChart";
 import type { TodaySummary, RecentInboxItem } from "@/lib/today/summary";
 import type { CalendarEvent, CalendarState } from "@/lib/calendar/types";
@@ -75,24 +77,41 @@ function TaskRow({ task }: { task: Task }) {
 
 function RoutineRow({ state }: { state: RoutineState }) {
   const [pending, startTransition] = useTransition();
-  const { routine, loggedToday, streak, weeklyProgress } = state;
+  const { routine, loggedToday, streak, weeklyProgress, dailyProgress } = state;
+  const counted = dailyProgress != null;
   return (
     <li className="flex items-center gap-3 border-b border-border py-3">
       <button
         type="button"
-        aria-label={loggedToday ? "Abhaken rückgängig" : "Heute abhaken"}
+        aria-label={
+          counted
+            ? `Heute abhaken, ${dailyProgress.done} von ${dailyProgress.target}`
+            : loggedToday
+              ? "Abhaken rückgängig"
+              : "Heute abhaken"
+        }
         aria-pressed={loggedToday}
         disabled={pending}
         onClick={() =>
           startTransition(() =>
-            loggedToday ? unlogToday(routine.id) : logToday(routine.id),
+            counted
+              ? setTodayCount(routine.id, nextCount(dailyProgress))
+              : loggedToday
+                ? unlogToday(routine.id)
+                : logToday(routine.id),
           )
         }
         className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-sm border border-border text-[11px] leading-none ${
           loggedToday ? "bg-on-surface text-surface" : "bg-surface"
         }`}
       >
-        {loggedToday ? "✓" : ""}
+        {counted
+          ? loggedToday
+            ? "✓"
+            : String(dailyProgress.done)
+          : loggedToday
+            ? "✓"
+            : ""}
       </button>
       <span
         className={`flex-1 text-body ${
@@ -105,6 +124,12 @@ function RoutineRow({ state }: { state: RoutineState }) {
         <WeeklyProgress
           done={weeklyProgress.done}
           target={weeklyProgress.target}
+        />
+      )}
+      {dailyProgress && (
+        <DailyProgress
+          done={dailyProgress.done}
+          target={dailyProgress.target}
         />
       )}
       <StreakIndicator

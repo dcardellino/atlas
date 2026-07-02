@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import {
   addDaysIso,
   currentStreak,
+  daysMeetingTarget,
   lastNDays,
   weeklyProgress,
   weeklyStreak,
@@ -55,6 +56,7 @@ export async function create(input: {
   time_of_day?: TimeOfDay;
   duration_days?: number | null;
   weekly_target?: number | null;
+  daily_target?: number | null;
   area_id?: string | null;
 }): Promise<Routine> {
   const { supabase, userId } = await requireUser();
@@ -67,6 +69,7 @@ export async function create(input: {
       time_of_day: input.time_of_day ?? "anytime",
       duration_days: input.duration_days ?? null,
       weekly_target: input.weekly_target ?? null,
+      daily_target: input.daily_target ?? null,
       area_id: input.area_id ?? null,
     })
     .select("*")
@@ -88,6 +91,7 @@ export async function update(
       | "time_of_day"
       | "duration_days"
       | "weekly_target"
+      | "daily_target"
       | "area_id"
     >
   >,
@@ -154,6 +158,37 @@ export async function unlogToday(
   revalidatePath("/today");
 }
 
+/**
+ * Set today's check-off count for an N-times-per-day routine. The UI computes the
+ * next value (cyclic +1, wrapping to 0 at the target); `count <= 0` clears the day
+ * (delete the row), `count > 0` upserts it. Unlike `logToday`, this upsert updates
+ * `count` on conflict (no `ignoreDuplicates`).
+ */
+export async function setTodayCount(
+  routineId: string,
+  count: number,
+  now: Date = new Date(),
+  tz: string = DEFAULT_TZ,
+): Promise<void> {
+  const { supabase, userId } = await requireUser();
+  const log_date = todayIso(now, tz);
+  if (count <= 0) {
+    await supabase
+      .from("routine_logs")
+      .delete()
+      .eq("user_id", userId)
+      .eq("routine_id", routineId)
+      .eq("log_date", log_date);
+  } else {
+    await supabase.from("routine_logs").upsert(
+      { user_id: userId, routine_id: routineId, log_date, completed: true, count },
+      { onConflict: "routine_id,log_date" },
+    );
+  }
+  revalidatePath("/routines");
+  revalidatePath("/today");
+}
+
 /** Lazily archive any time-boxed routines whose window has elapsed (TASK-031). */
 async function archiveExpired(
   supabase: Awaited<ReturnType<typeof requireUser>>["supabase"],
@@ -199,7 +234,7 @@ export async function listWithState(
       .order("created_at", { ascending: true }),
     supabase
       .from("routine_logs")
-      .select("routine_id, log_date")
+      .select("routine_id, log_date, count")
       .eq("user_id", userId)
       .order("log_date", { ascending: false }),
   ]);
@@ -211,33 +246,49 @@ export async function listWithState(
     today,
   );
 
-  // Group log dates by routine.
-  const byRoutine = new Map<string, string[]>();
+  // Group logs (date + per-day count) by routine.
+  const byRoutine = new Map<string, { date: string; count: number }[]>();
   for (const log of (logsRes.data ?? []) as Pick<
     RoutineLog,
-    "routine_id" | "log_date"
+    "routine_id" | "log_date" | "count"
   >[]) {
     const arr = byRoutine.get(log.routine_id) ?? [];
-    arr.push(log.log_date);
+    arr.push({ date: log.log_date, count: log.count });
     byRoutine.set(log.routine_id, arr);
   }
 
   return active.map((routine) => {
-    const dates = byRoutine.get(routine.id) ?? [];
+    const logs = byRoutine.get(routine.id) ?? [];
+    const dates = logs.map((l) => l.date);
+
+    // N-times-per-day: a day is "done" only once its count reaches the target.
+    if (routine.daily_target != null) {
+      const target = routine.daily_target;
+      const doneDates = daysMeetingTarget(logs, target);
+      const todayCount = logs.find((l) => l.date === today)?.count ?? 0;
+      return {
+        routine,
+        loggedToday: todayCount >= target,
+        streak: currentStreak(doneDates, today),
+        last30: lastNDays(doneDates, today, 30),
+        weeklyProgress: null,
+        dailyProgress: { done: todayCount, target },
+      };
+    }
+
+    // N-times-per-week vs. plain daily — presence of a day is enough.
     const target = routine.weekly_target;
     return {
       routine,
       loggedToday: dates.includes(today),
-      // Daily → consecutive days; weekly → consecutive weeks meeting the target.
       streak:
         target == null
           ? currentStreak(dates, today)
           : weeklyStreak(dates, today, target),
       last30: lastNDays(dates, today, 30),
       weeklyProgress:
-        target == null
-          ? null
-          : { done: weeklyProgress(dates, today), target },
+        target == null ? null : { done: weeklyProgress(dates, today), target },
+      dailyProgress: null,
     };
   });
 }
@@ -256,21 +307,31 @@ export async function streak(
   const [routineRes, logsRes] = await Promise.all([
     supabase
       .from("routines")
-      .select("weekly_target")
+      .select("weekly_target, daily_target")
       .eq("user_id", userId)
       .eq("id", routineId)
       .single(),
     supabase
       .from("routine_logs")
-      .select("log_date")
+      .select("log_date, count")
       .eq("user_id", userId)
       .eq("routine_id", routineId),
   ]);
-  const dates = (logsRes.data ?? []).map((l) => l.log_date as string);
+  const logs = (logsRes.data ?? []).map((l) => ({
+    date: l.log_date as string,
+    count: l.count as number,
+  }));
   const today = todayIso(now, tz);
-  const target = (routineRes.data as { weekly_target: number | null } | null)
-    ?.weekly_target;
-  return target == null
+  const routine = routineRes.data as {
+    weekly_target: number | null;
+    daily_target: number | null;
+  } | null;
+
+  if (routine?.daily_target != null) {
+    return currentStreak(daysMeetingTarget(logs, routine.daily_target), today);
+  }
+  const dates = logs.map((l) => l.date);
+  return routine?.weekly_target == null
     ? currentStreak(dates, today)
-    : weeklyStreak(dates, today, target);
+    : weeklyStreak(dates, today, routine.weekly_target);
 }
