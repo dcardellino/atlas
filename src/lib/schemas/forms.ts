@@ -44,6 +44,7 @@ export const RoutineFormSchema = z.object({
   name: requiredName,
   description: optionalText(DESCRIPTION_MAX),
   time_of_day: z.enum(TIMES_OF_DAY),
+  // Positive whole number of days, or empty for an open-ended routine.
   duration_days: z
     .string()
     .regex(/^\d+$/, "Nur ganze Tage.")
