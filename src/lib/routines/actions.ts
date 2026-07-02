@@ -3,7 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { formatInTimeZone } from "date-fns-tz";
 import { createClient } from "@/lib/supabase/server";
-import { addDaysIso, currentStreak, lastNDays } from "@/lib/routines/streak";
+import {
+  addDaysIso,
+  currentStreak,
+  lastNDays,
+  weeklyProgress,
+  weeklyStreak,
+} from "@/lib/routines/streak";
 import type {
   Routine,
   RoutineLog,
@@ -50,6 +56,7 @@ export async function create(input: {
   specific_time?: string | null;
   notify?: boolean;
   duration_days?: number | null;
+  weekly_target?: number | null;
   area_id?: string | null;
 }): Promise<Routine> {
   const { supabase, userId } = await requireUser();
@@ -63,6 +70,7 @@ export async function create(input: {
       specific_time: input.specific_time ?? null,
       notify: input.notify ?? false,
       duration_days: input.duration_days ?? null,
+      weekly_target: input.weekly_target ?? null,
       area_id: input.area_id ?? null,
     })
     .select("*")
@@ -85,6 +93,7 @@ export async function update(
       | "specific_time"
       | "notify"
       | "duration_days"
+      | "weekly_target"
       | "area_id"
     >
   >,
@@ -222,27 +231,53 @@ export async function listWithState(
 
   return active.map((routine) => {
     const dates = byRoutine.get(routine.id) ?? [];
+    const target = routine.weekly_target;
     return {
       routine,
       loggedToday: dates.includes(today),
-      streak: currentStreak(dates, today),
+      // Daily → consecutive days; weekly → consecutive weeks meeting the target.
+      streak:
+        target == null
+          ? currentStreak(dates, today)
+          : weeklyStreak(dates, today, target),
       last30: lastNDays(dates, today, 30),
+      weeklyProgress:
+        target == null
+          ? null
+          : { done: weeklyProgress(dates, today), target },
     };
   });
 }
 
-/** Current streak for a single routine (API spec: routines.streak). */
+/**
+ * Current streak for a single routine (API spec: routines.streak). Daily routines
+ * count consecutive days; weekly routines (weekly_target set) count consecutive
+ * weeks that met the target.
+ */
 export async function streak(
   routineId: string,
   now: Date = new Date(),
   tz: string = DEFAULT_TZ,
 ): Promise<number> {
   const { supabase, userId } = await requireUser();
-  const { data } = await supabase
-    .from("routine_logs")
-    .select("log_date")
-    .eq("user_id", userId)
-    .eq("routine_id", routineId);
-  const dates = (data ?? []).map((l) => l.log_date as string);
-  return currentStreak(dates, todayIso(now, tz));
+  const [routineRes, logsRes] = await Promise.all([
+    supabase
+      .from("routines")
+      .select("weekly_target")
+      .eq("user_id", userId)
+      .eq("id", routineId)
+      .single(),
+    supabase
+      .from("routine_logs")
+      .select("log_date")
+      .eq("user_id", userId)
+      .eq("routine_id", routineId),
+  ]);
+  const dates = (logsRes.data ?? []).map((l) => l.log_date as string);
+  const today = todayIso(now, tz);
+  const target = (routineRes.data as { weekly_target: number | null } | null)
+    ?.weekly_target;
+  return target == null
+    ? currentStreak(dates, today)
+    : weeklyStreak(dates, today, target);
 }

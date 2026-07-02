@@ -21,6 +21,8 @@ export type Routine = {
   specific_time: string | null;
   notify: boolean;
   duration_days: number | null;
+  /** null = daily routine; 1..7 = target check-offs per ISO week ("N-mal/Woche"). */
+  weekly_target: number | null;
   start_date: string;
   archived_at: string | null;
   created_at: string;
@@ -38,6 +40,9 @@ export type RoutineLog = {
 export type RoutineState = {
   routine: Routine;
   loggedToday: boolean;
+  /** Consecutive days (daily routines) or consecutive met weeks (weekly routines). */
   streak: number;
   last30: { date: string; done: boolean }[];
+  /** Current-week progress for weekly routines; null for daily ones. */
+  weeklyProgress: { done: number; target: number } | null;
 };
