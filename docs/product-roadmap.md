@@ -169,7 +169,7 @@
 
 - [x] **TASK-029** — Routines-Server-Actions
   Files: `src/lib/routines/actions.ts`
-  Notes: `list`, `create`, `update`, `archive`, `logToday`. `logToday` idempotent via `UNIQUE(routine_id, log_date)`. Implementiert FR-007. Verify: doppeltes Loggen erzeugt kein Duplikat.
+  Notes: `list`, `create`, `update`, `remove`, `logToday`. `logToday` idempotent via `UNIQUE(routine_id, log_date)`. Implementiert FR-007. Verify: doppeltes Loggen erzeugt kein Duplikat.
 
 - [x] **TASK-030** — Streak-Berechnung
   Files: `src/lib/routines/streak.ts`
