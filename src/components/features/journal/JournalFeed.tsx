@@ -7,6 +7,9 @@ import { create, attachMedia, remove } from "@/lib/journal/actions";
 import { uploadJournalPhoto, UploadError } from "@/lib/journal/upload";
 import type { JournalFeedItem } from "@/lib/journal/types";
 import type { AreaOption } from "@/components/features/tasks/TaskEditor";
+import EmptyState from "@/components/ui/EmptyState";
+import { useToast } from "@/components/ui/Toast";
+import { JournalFormSchema, fieldErrors } from "@/lib/schemas/forms";
 
 /**
  * Journal feed + composer (TASK-039, FR-008). Chronological reflection feed with
@@ -65,6 +68,7 @@ function Composer({
   const [pending, startTransition] = useTransition();
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const usedVoice = useRef(false);
+  const { show: showToast } = useToast();
 
   function toggleRecording() {
     if (recording) {
@@ -94,8 +98,13 @@ function Composer({
   }
 
   function save() {
+    if (pending) return;
+    const errs = fieldErrors(JournalFormSchema, { body });
+    if (errs) {
+      setError(errs.body);
+      return;
+    }
     const value = body.trim();
-    if (!value || pending) return;
     setError(null);
     startTransition(async () => {
       // 1. Persist the text entry first — never lose it to a photo failure.
@@ -128,7 +137,10 @@ function Composer({
       setAreaId("");
       setFiles([]);
       usedVoice.current = false;
-      if (!uploadFailed) setError(null);
+      if (!uploadFailed) {
+        setError(null);
+        showToast("Eintrag gespeichert");
+      }
       router.refresh();
     });
   }
@@ -273,9 +285,10 @@ export default function JournalFeed({
       <Composer areas={areas} userId={userId} />
 
       {feed.length === 0 ? (
-        <p className="mt-8 text-body text-on-surface-muted">
-          Noch nichts festgehalten. Sprich oder tippe deinen ersten Gedanken.
-        </p>
+        <EmptyState
+          title="Noch nichts festgehalten."
+          hint="Sprich oder tippe deinen ersten Gedanken."
+        />
       ) : (
         <ul className="mt-6">
           {feed.map((item) => (

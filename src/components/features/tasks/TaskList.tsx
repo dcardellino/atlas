@@ -1,11 +1,17 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import dynamic from "next/dynamic";
 import { formatInTimeZone } from "date-fns-tz";
 import { toggleComplete, setTop3, type Task } from "@/lib/tasks/actions";
-import TaskEditor, {
-  type AreaOption,
-} from "@/components/features/tasks/TaskEditor";
+import { type AreaOption } from "@/components/features/tasks/TaskEditor";
+import EmptyState from "@/components/ui/EmptyState";
+
+// The editor is only needed on interaction (create/edit) — keep it out of the
+// initial Tasks bundle (TASK-055).
+const TaskEditor = dynamic(
+  () => import("@/components/features/tasks/TaskEditor"),
+);
 
 /**
  * Tasks list UI (TASK-022). Filter by status (open/done/all) and area, sorted by
@@ -170,9 +176,10 @@ export default function TaskList({
       </div>
 
       {visible.length === 0 ? (
-        <p className="mt-8 text-body text-on-surface-muted">
-          Keine Aufgaben hier. Erfasse deinen ersten Gedanken.
-        </p>
+        <EmptyState
+          title="Keine Aufgaben hier."
+          hint="Erfasse deinen ersten Gedanken — sprich oder tippe."
+        />
       ) : (
         <ul className="mt-4">
           {visible.map((t) => (

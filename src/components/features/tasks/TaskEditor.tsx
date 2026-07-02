@@ -2,6 +2,9 @@
 
 import { useState, useTransition } from "react";
 import { create, update, remove, type Task } from "@/lib/tasks/actions";
+import { useToast } from "@/components/ui/Toast";
+import { TaskFormSchema, fieldErrors } from "@/lib/schemas/forms";
+import { useEscapeKey } from "@/lib/hooks/useEscapeKey";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 /**
@@ -56,8 +59,14 @@ export default function TaskEditor({
   const [recurrence, setRecurrence] = useState(task?.recurrence ?? "");
   const [confirming, setConfirming] = useState(false);
   const [pending, startTransition] = useTransition();
+  const [errors, setErrors] = useState<Record<string, string> | null>(null);
+  const { show: showToast } = useToast();
+  useEscapeKey(onClose);
 
   function save() {
+    const errs = fieldErrors(TaskFormSchema, { title, notes, recurrence });
+    setErrors(errs);
+    if (errs) return;
     startTransition(async () => {
       const values = {
         title: title.trim(),
@@ -73,6 +82,7 @@ export default function TaskEditor({
         await create(values);
       }
       onClose();
+      showToast(task ? "Gespeichert" : "Aufgabe angelegt");
     });
   }
 
@@ -81,6 +91,7 @@ export default function TaskEditor({
     startTransition(async () => {
       await remove(task.id);
       onClose();
+      showToast("Aufgabe gelöscht");
     });
   }
 
@@ -91,6 +102,9 @@ export default function TaskEditor({
       onClick={onClose}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={task ? "Aufgabe bearbeiten" : "Neue Aufgabe"}
         className="w-full max-w-lg rounded-md border border-border bg-surface-raised p-md"
         onClick={(e) => e.stopPropagation()}
       >
@@ -101,8 +115,14 @@ export default function TaskEditor({
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
+            aria-invalid={Boolean(errors?.title)}
             className={fieldInput}
           />
+          {errors?.title && (
+            <span role="alert" className="mt-1 block text-body-sm text-danger">
+              {errors.title}
+            </span>
+          )}
         </label>
 
         <label className="mt-3 block">
@@ -111,8 +131,14 @@ export default function TaskEditor({
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={2}
+            aria-invalid={Boolean(errors?.notes)}
             className={`${fieldInput} resize-none`}
           />
+          {errors?.notes && (
+            <span role="alert" className="mt-1 block text-body-sm text-danger">
+              {errors.notes}
+            </span>
+          )}
         </label>
 
         <div className="mt-3 grid grid-cols-2 gap-3">

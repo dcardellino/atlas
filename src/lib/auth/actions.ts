@@ -14,6 +14,8 @@ export type TokenSummary = {
   label: string | null;
   last_used_at: string | null;
   created_at: string;
+  revoked_at: string | null;
+  expires_at: string | null;
 };
 
 async function requireUser() {
@@ -29,7 +31,7 @@ export async function listTokens(): Promise<TokenSummary[]> {
   const { supabase, userId } = await requireUser();
   const { data } = await supabase
     .from("api_tokens")
-    .select("id, label, last_used_at, created_at")
+    .select("id, label, last_used_at, created_at, revoked_at, expires_at")
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
   return data ?? [];
@@ -63,8 +65,17 @@ export async function createToken(
   return { id: data.id, plaintext };
 }
 
+/**
+ * Soft-revoke: stamp `revoked_at` instead of deleting the row, so a revoked token
+ * still resolves and /api/capture can answer with a specific "token revoked" 401
+ * (TASK-056) rather than an indistinguishable "not found".
+ */
 export async function revokeToken(id: string): Promise<void> {
   const { supabase, userId } = await requireUser();
-  await supabase.from("api_tokens").delete().eq("id", id).eq("user_id", userId);
+  await supabase
+    .from("api_tokens")
+    .update({ revoked_at: new Date().toISOString() })
+    .eq("id", id)
+    .eq("user_id", userId);
   revalidatePath("/settings");
 }
