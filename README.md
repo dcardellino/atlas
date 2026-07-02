@@ -97,15 +97,19 @@ Shortcut-Tokens** (the plaintext is shown exactly once), then follow
 
 ## Scheduled jobs (crons)
 
-Vercel Hobby throttles cron jobs to ~daily, so a GitHub Actions workflow
-(`.github/workflows/cron.yml`) drives them at real frequency, authenticated with
-`CRON_SECRET`:
+Vercel Hobby throttles cron jobs to ~daily, and GitHub scheduled workflows proved
+unreliable (delayed / skipped under load), so **Supabase Cron** (`pg_cron` +
+`pg_net`) drives the routes straight from the database
+(`supabase/migrations/0009_supabase_cron.sql`), authenticated with `CRON_SECRET`:
 
 - `/api/cron/reminders` — every 15 min, sends due task reminders via Telegram
 - `/api/cron/calendar-sync` — every 15 min, refreshes the read-only calendar cache
-- `/api/cron/daily-summary` — ~06:00 Europe/Berlin, sends the day's overview
+- `/api/cron/daily-summary` — 05:00 UTC (~06:00 Europe/Berlin), sends the day's overview
 
-Set the `CRON_SECRET` and `CRON_BASE_URL` repository secrets for the workflow.
+The scheduler reads two secrets from the Supabase Vault (create once, never
+committed): `atlas_cron_base_url` (stable prod origin) and `atlas_cron_secret`
+(must equal the Vercel env `CRON_SECRET`). Inspect jobs with
+`select * from cron.job;` and runs with `select * from cron.job_run_details;`.
 
 ## Deployment
 
