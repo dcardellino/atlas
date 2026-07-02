@@ -80,11 +80,6 @@ function RoutineRow({
               {areaName}
             </span>
           )}
-          {routine.specific_time && (
-            <span className="font-mono text-meta uppercase tracking-label text-on-surface-muted">
-              {routine.specific_time.slice(0, 5)}
-            </span>
-          )}
         </button>
         <div className="mt-2">
           <StreakChart
@@ -117,9 +112,6 @@ function RoutineEditor({
   const [timeOfDay, setTimeOfDay] = useState<TimeOfDay>(
     routine?.time_of_day ?? "anytime",
   );
-  const [specificTime, setSpecificTime] = useState(
-    routine?.specific_time?.slice(0, 5) ?? "",
-  );
   const [durationDays, setDurationDays] = useState(
     routine?.duration_days != null ? String(routine.duration_days) : "",
   );
@@ -129,7 +121,6 @@ function RoutineEditor({
   const [weeklyTarget, setWeeklyTarget] = useState(
     routine?.weekly_target != null ? String(routine.weekly_target) : "4",
   );
-  const [notify, setNotify] = useState(routine?.notify ?? false);
   const [areaId, setAreaId] = useState(routine?.area_id ?? "");
   const [confirming, setConfirming] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -142,7 +133,6 @@ function RoutineEditor({
       name,
       description,
       time_of_day: timeOfDay,
-      specific_time: specificTime,
       duration_days: durationDays,
       weekly_target: frequency === "weekly" ? weeklyTarget : "",
     });
@@ -152,10 +142,8 @@ function RoutineEditor({
       name: name.trim(),
       description: description.trim() || null,
       time_of_day: timeOfDay,
-      specific_time: specificTime || null,
       duration_days: durationDays ? Number(durationDays) : null,
       weekly_target: frequency === "weekly" ? Number(weeklyTarget) : null,
-      notify,
       area_id: areaId || null,
     };
     startTransition(async () => {
@@ -234,24 +222,6 @@ function RoutineEditor({
             </select>
           </label>
           <label className="block">
-            <span className={fieldLabel}>Uhrzeit</span>
-            <input
-              type="time"
-              value={specificTime}
-              onChange={(e) => setSpecificTime(e.target.value)}
-              aria-invalid={Boolean(errors?.specific_time)}
-              className={`${fieldInput} min-h-[42px] appearance-none text-left`}
-            />
-            {errors?.specific_time && (
-              <span role="alert" className="mt-1 block text-body-sm text-danger">
-                {errors.specific_time}
-              </span>
-            )}
-          </label>
-        </div>
-
-        <div className="mt-3 grid grid-cols-2 gap-3">
-          <label className="block">
             <span className={fieldLabel}>Bereich</span>
             <select
               value={areaId}
@@ -266,6 +236,9 @@ function RoutineEditor({
               ))}
             </select>
           </label>
+        </div>
+
+        <div className="mt-3 grid grid-cols-2 gap-3">
           <label className="block">
             <span className={fieldLabel}>Dauer (Tage)</span>
             <input
@@ -324,16 +297,6 @@ function RoutineEditor({
             </label>
           )}
         </div>
-
-        <label className="mt-4 flex items-center gap-2">
-          <input
-            type="checkbox"
-            checked={notify}
-            onChange={(e) => setNotify(e.target.checked)}
-            className="h-[18px] w-[18px] rounded-sm border border-border"
-          />
-          <span className={fieldLabel}>Erinnerung senden</span>
-        </label>
 
         <div className="mt-6 flex items-center justify-between gap-3">
           {routine ? (

@@ -53,8 +53,6 @@ export async function create(input: {
   name: string;
   description?: string | null;
   time_of_day?: TimeOfDay;
-  specific_time?: string | null;
-  notify?: boolean;
   duration_days?: number | null;
   weekly_target?: number | null;
   area_id?: string | null;
@@ -67,8 +65,6 @@ export async function create(input: {
       name: input.name.trim(),
       description: input.description ?? null,
       time_of_day: input.time_of_day ?? "anytime",
-      specific_time: input.specific_time ?? null,
-      notify: input.notify ?? false,
       duration_days: input.duration_days ?? null,
       weekly_target: input.weekly_target ?? null,
       area_id: input.area_id ?? null,
@@ -90,8 +86,6 @@ export async function update(
       | "name"
       | "description"
       | "time_of_day"
-      | "specific_time"
-      | "notify"
       | "duration_days"
       | "weekly_target"
       | "area_id"
@@ -202,7 +196,6 @@ export async function listWithState(
       .select("*")
       .eq("user_id", userId)
       .is("archived_at", null)
-      .order("specific_time", { ascending: true, nullsFirst: true })
       .order("created_at", { ascending: true }),
     supabase
       .from("routine_logs")

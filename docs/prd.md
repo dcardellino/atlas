@@ -190,8 +190,6 @@ CREATE TABLE routines (
   name VARCHAR(160) NOT NULL,
   description TEXT,
   time_of_day VARCHAR(20) NOT NULL DEFAULT 'anytime', -- 'morning'|'afternoon'|'evening'|'anytime'
-  specific_time TIME,
-  notify BOOLEAN NOT NULL DEFAULT FALSE,
   duration_days INT,                       -- null = ongoing, sonst befristeter Streak
   start_date DATE NOT NULL DEFAULT CURRENT_DATE,
   archived_at TIMESTAMPTZ,

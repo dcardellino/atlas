@@ -46,20 +46,17 @@ function rateLimited(userId: string, now: number): boolean {
 const CAPTURE_TZ = process.env.CAPTURE_TZ ?? "Europe/Berlin";
 
 /**
- * Derive a routine's time-of-day grouping and specific time from a captured
- * due time, if any. Routines usually carry no time → "anytime" (TASK-035).
+ * Derive a routine's time-of-day grouping from a captured due time, if any.
+ * Routines usually carry no time → "anytime" (TASK-035).
  */
 function routineTiming(dueAt: string | null | undefined): {
   time_of_day: "morning" | "afternoon" | "evening" | "anytime";
-  specific_time: string | null;
 } {
-  if (!dueAt) return { time_of_day: "anytime", specific_time: null };
-  const date = new Date(dueAt);
-  const hour = Number(formatInTimeZone(date, CAPTURE_TZ, "H"));
-  const specific_time = formatInTimeZone(date, CAPTURE_TZ, "HH:mm:ss");
+  if (!dueAt) return { time_of_day: "anytime" };
+  const hour = Number(formatInTimeZone(new Date(dueAt), CAPTURE_TZ, "H"));
   const time_of_day =
     hour < 12 ? "morning" : hour < 17 ? "afternoon" : "evening";
-  return { time_of_day, specific_time };
+  return { time_of_day };
 }
 
 async function authenticate(request: NextRequest): Promise<AuthOutcome> {
@@ -211,7 +208,7 @@ export async function POST(request: NextRequest) {
   } else if (classification.type === "routine") {
     // `routines` has no source_inbox_id; the inbox item's classified_into below
     // preserves the link back to this routine.
-    const { time_of_day, specific_time } = routineTiming(classification.due_at);
+    const { time_of_day } = routineTiming(classification.due_at);
     const { data: routine, error } = await db
       .from("routines")
       .insert({
@@ -219,7 +216,6 @@ export async function POST(request: NextRequest) {
         area_id: areaId,
         name: classification.title,
         time_of_day,
-        specific_time,
       })
       .select("id")
       .single();

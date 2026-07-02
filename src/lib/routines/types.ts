@@ -18,8 +18,6 @@ export type Routine = {
   name: string;
   description: string | null;
   time_of_day: TimeOfDay;
-  specific_time: string | null;
-  notify: boolean;
   duration_days: number | null;
   /** null = daily routine; 1..7 = target check-offs per ISO week ("N-mal/Woche"). */
   weekly_target: number | null;
