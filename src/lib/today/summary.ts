@@ -1,3 +1,4 @@
+import { formatInTimeZone } from "date-fns-tz";
 import { createClient } from "@/lib/supabase/server";
 import { dayBoundsUtc } from "@/lib/time/day";
 import type { Task } from "@/lib/tasks/actions";
@@ -23,6 +24,13 @@ export type RecentInboxItem = {
   created_at: string;
 };
 
+/** Ein heute protokolliertes Workout (leichte Verknüpfung zum Workout-Tracker). */
+export type TodayWorkout = {
+  id: string;
+  title: string | null;
+  type: string;
+};
+
 export type TodaySummary = {
   top3: Task[];
   dueToday: Task[];
@@ -30,6 +38,7 @@ export type TodaySummary = {
   routines: RoutineState[];
   calendarEvents: CalendarEvent[];
   calendarState: CalendarState;
+  todayWorkout: TodayWorkout | null;
 };
 
 const EMPTY_CALENDAR_STATE: CalendarState = {
@@ -54,11 +63,13 @@ export async function summary(
       routines: [],
       calendarEvents: [],
       calendarState: EMPTY_CALENDAR_STATE,
+      todayWorkout: null,
     };
 
   const [startUtc, endUtc] = dayBoundsUtc(now, tz);
+  const todayLocal = formatInTimeZone(now, tz, "yyyy-MM-dd");
 
-  const [top3Res, dueRes, inboxRes, routines, calRes, syncRes] =
+  const [top3Res, dueRes, inboxRes, routines, calRes, syncRes, workoutRes] =
     await Promise.all([
       supabase
         .from("tasks")
@@ -94,6 +105,14 @@ export async function summary(
         .select("last_synced_at, last_error")
         .eq("user_id", user.id)
         .maybeSingle(),
+      supabase
+        .from("workouts")
+        .select("id, title, type")
+        .eq("user_id", user.id)
+        .eq("performed_on", todayLocal)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
     ]);
 
   const sync = syncRes.data as {
@@ -112,5 +131,6 @@ export async function summary(
       lastSyncedAt: sync?.last_synced_at ?? null,
       error: sync?.last_error ?? null,
     },
+    todayWorkout: (workoutRes.data as TodayWorkout | null) ?? null,
   };
 }

@@ -22,11 +22,12 @@ vi.mock("next/link", () => ({
 }));
 
 describe("Nav", () => {
-  it("renders all six nav destinations", () => {
+  it("renders all nav destinations", () => {
     render(<Nav />);
     for (const label of [
       "Today",
       "Tasks",
+      "Training",
       "Areas",
       "Routines",
       "Journal",
