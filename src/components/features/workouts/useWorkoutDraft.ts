@@ -14,6 +14,7 @@ import {
   type TemplateBlock,
   type WorkoutDetail,
   type WorkoutInput,
+  type WorkoutMode,
   type WorkoutType,
 } from "@/lib/workouts/types";
 import {
@@ -64,7 +65,7 @@ export type WorkoutDraft = {
   // --- Block-/Set-Mutatoren ---
   patchBlock: (key: string, patch: Partial<BlockDraft>) => void;
   patchSet: (bKey: string, sKey: string, patch: Partial<SetDraft>) => void;
-  addBlock: () => void;
+  addBlock: (mode?: WorkoutMode) => void;
   removeBlock: (key: string) => void;
   addSet: (bKey: string) => void;
   removeSet: (bKey: string, sKey: string) => void;
@@ -162,8 +163,8 @@ export function useWorkoutDraft({
       ),
     );
   }
-  function addBlock() {
-    setBlocks((bs) => [...bs, emptyBlock()]);
+  function addBlock(mode?: WorkoutMode) {
+    setBlocks((bs) => [...bs, emptyBlock(mode)]);
   }
   function removeBlock(key: string) {
     setBlocks((bs) => bs.filter((b) => b.key !== key));

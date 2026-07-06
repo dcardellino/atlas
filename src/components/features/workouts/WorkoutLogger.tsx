@@ -164,7 +164,7 @@ export default function WorkoutLogger({
 
       <button
         type="button"
-        onClick={addBlock}
+        onClick={() => addBlock()}
         className="mt-4 h-11 w-full rounded-sm border border-border bg-surface-raised px-4 font-mono text-label uppercase tracking-label text-on-surface transition-colors hover:border-accent hover:text-accent"
       >
         + Block hinzufügen
