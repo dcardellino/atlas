@@ -1,9 +1,11 @@
 import TokenManager from "@/components/features/settings/TokenManager";
 import IntegrationStatus from "@/components/features/settings/IntegrationStatus";
 import MetricsPanel from "@/components/features/settings/MetricsPanel";
+import JournalReminderSettings from "@/components/features/settings/JournalReminderSettings";
 import { listTokens } from "@/lib/auth/actions";
 import { getSyncState } from "@/lib/calendar/actions";
 import { metricsSummary } from "@/lib/metrics/summary";
+import { getReminderSettings } from "@/lib/journal/reminder-settings";
 import { createClient } from "@/lib/supabase/server";
 
 // Settings entry point (TASK-016, TASK-046). Token management (Phase 1) plus the
@@ -15,10 +17,11 @@ export default async function SettingsPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [tokens, syncState, metrics] = await Promise.all([
+  const [tokens, syncState, metrics, reminderSettings] = await Promise.all([
     listTokens(),
     getSyncState(),
     metricsSummary(),
+    getReminderSettings(),
   ]);
 
   return (
@@ -43,6 +46,7 @@ export default async function SettingsPage() {
           timezone: process.env.CAPTURE_TZ ?? "Europe/Berlin",
         }}
       />
+      <JournalReminderSettings initial={reminderSettings} />
     </section>
   );
 }
