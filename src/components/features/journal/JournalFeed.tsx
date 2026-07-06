@@ -2,6 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { formatInTimeZone } from "date-fns-tz";
 import { create, attachMedia, remove } from "@/lib/journal/actions";
 import { uploadJournalPhoto, UploadError } from "@/lib/journal/upload";
@@ -281,6 +282,21 @@ export default function JournalFeed({
     <section>
       <p className={fieldLabel}>Journal</p>
       <h1 className="mt-1 font-serif text-display text-on-surface">Journal</h1>
+
+      <div className="mt-4 flex gap-3">
+        <Link
+          href="/journal/morning"
+          className="h-9 rounded-sm border border-border px-4 py-2 font-mono text-label uppercase tracking-label text-on-surface"
+        >
+          Morning Setup
+        </Link>
+        <Link
+          href="/journal/evening"
+          className="h-9 rounded-sm border border-border px-4 py-2 font-mono text-label uppercase tracking-label text-on-surface"
+        >
+          Evening Close
+        </Link>
+      </div>
 
       <Composer areas={areas} userId={userId} />
 
