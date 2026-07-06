@@ -8,7 +8,7 @@ import { composeMorningBody } from "@/lib/journal/checkins";
 import { useToast } from "@/components/ui/Toast";
 
 /**
- * Morning Setup (TASK-<next>). Top 3 is not free text — it reuses the app's
+ * Morning Setup. Top 3 is not free text — it reuses the app's
  * existing is_top3 flag on tasks (setTop3), so this form is the same source of
  * truth as the Tasks screen and Today view, not a parallel list.
  */
