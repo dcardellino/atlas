@@ -27,13 +27,20 @@ function formatTime(sec: number | null): string | null {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
-function setSummary(s: WorkoutSet): string {
+export function setSummary(s: WorkoutSet): string {
   const parts: string[] = [];
   if (s.reps != null) parts.push(`${s.reps} Wdh.`);
   if (s.weight_kg != null) parts.push(`${s.weight_kg} kg`);
   if (s.distance_m != null) parts.push(`${s.distance_m} m`);
   if (s.duration_seconds != null) parts.push(`${formatTime(s.duration_seconds)} min`);
+  // Abgeleitete Pace: nur wenn Distanz und Dauer beide vorhanden und > 0
+  if (s.distance_m != null && s.distance_m > 0 && s.duration_seconds != null && s.duration_seconds > 0) {
+    const paceSecPerKm = Math.round(s.duration_seconds / (s.distance_m / 1000));
+    parts.push(`${formatTime(paceSecPerKm)} /km`);
+  }
   if (s.calories != null) parts.push(`${s.calories} kcal`);
+  // RPE ans Ende
+  if (s.rpe != null) parts.push(`RPE ${s.rpe}`);
   return parts.join(" · ") || "—";
 }
 
