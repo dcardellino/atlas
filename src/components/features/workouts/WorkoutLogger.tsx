@@ -23,10 +23,18 @@ import {
   type WorkoutMode,
   type WorkoutType,
   type WorkoutInput,
-  type BlockInput,
-  type SetInput,
-  type TemplateBlock,
 } from "@/lib/workouts/types";
+import {
+  toInt,
+  todayIso,
+  emptySet,
+  emptyBlock,
+  detailToBlocks,
+  blocksToInput,
+  blocksToStructure,
+  type SetDraft,
+  type BlockDraft,
+} from "@/lib/workouts/draft";
 import { WorkoutFormSchema, fieldErrors } from "@/lib/schemas/forms";
 import { useToast } from "@/components/ui/Toast";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
@@ -44,144 +52,6 @@ const fieldInput =
   "mt-1 w-full rounded-sm border border-border bg-surface px-3 py-2 text-body text-on-surface outline-none focus:border-accent";
 const numInput =
   "w-full rounded-sm border border-border bg-surface px-2 py-1.5 text-body-sm text-on-surface outline-none focus:border-accent";
-
-// --- lokale Editier-Modelle (Zahlen als Strings für die Eingabe) -------------
-
-type SetDraft = {
-  key: string;
-  exercise_id: string | null;
-  exercise_name: string;
-  reps: string;
-  weight_kg: string;
-  distance_m: string;
-  duration_seconds: string;
-  calories: string;
-  is_warmup: boolean;
-};
-
-type BlockDraft = {
-  key: string;
-  mode: WorkoutMode;
-  name: string;
-  duration_seconds: string; // Sekunden
-  interval_seconds: string;
-  rest_seconds: string;
-  rounds: string;
-  result_rounds: string;
-  result_reps: string;
-  result_seconds: string;
-  sets: SetDraft[];
-};
-
-let counter = 0;
-const uid = () => `k${counter++}`;
-
-function toInt(v: string): number | null {
-  const t = v.trim();
-  if (t === "") return null;
-  const n = Number(t);
-  return Number.isFinite(n) ? Math.trunc(n) : null;
-}
-function toNum(v: string): number | null {
-  const t = v.trim();
-  if (t === "") return null;
-  const n = Number(t.replace(",", "."));
-  return Number.isFinite(n) ? n : null;
-}
-
-// mm:ss ODER reine Sekunden → Sekunden.
-function parseTime(v: string): number | null {
-  const t = v.trim();
-  if (t === "") return null;
-  if (t.includes(":")) {
-    const [m, s] = t.split(":");
-    const mm = Number(m);
-    const ss = Number(s);
-    if (!Number.isFinite(mm) || !Number.isFinite(ss)) return null;
-    return mm * 60 + ss;
-  }
-  const n = Number(t);
-  return Number.isFinite(n) ? Math.trunc(n) : null;
-}
-function formatTime(sec: number | null): string {
-  if (sec == null) return "";
-  const m = Math.floor(sec / 60);
-  const s = sec % 60;
-  return `${m}:${String(s).padStart(2, "0")}`;
-}
-
-function emptySet(): SetDraft {
-  return {
-    key: uid(),
-    exercise_id: null,
-    exercise_name: "",
-    reps: "",
-    weight_kg: "",
-    distance_m: "",
-    duration_seconds: "",
-    calories: "",
-    is_warmup: false,
-  };
-}
-
-function emptyBlock(mode: WorkoutMode = "straight"): BlockDraft {
-  const base: BlockDraft = {
-    key: uid(),
-    mode,
-    name: "",
-    duration_seconds: "",
-    interval_seconds: "",
-    rest_seconds: "",
-    rounds: "",
-    result_rounds: "",
-    result_reps: "",
-    result_seconds: "",
-    sets: [emptySet()],
-  };
-  if (mode === "emom") base.interval_seconds = "60";
-  if (mode === "tabata") {
-    base.interval_seconds = "20";
-    base.rest_seconds = "10";
-    base.rounds = "8";
-  }
-  return base;
-}
-
-function todayIso(): string {
-  // Lokales Datum (yyyy-MM-dd) ohne UTC-Verschiebung.
-  const d = new Date();
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-}
-
-function detailToBlocks(detail: WorkoutDetail): BlockDraft[] {
-  return detail.blocks.map((b) => ({
-    key: uid(),
-    mode: b.mode,
-    name: b.name ?? "",
-    duration_seconds: b.duration_seconds?.toString() ?? "",
-    interval_seconds: b.interval_seconds?.toString() ?? "",
-    rest_seconds: b.rest_seconds?.toString() ?? "",
-    rounds: b.rounds?.toString() ?? "",
-    result_rounds: b.result_rounds?.toString() ?? "",
-    result_reps: b.result_reps?.toString() ?? "",
-    result_seconds: formatTime(b.result_seconds),
-    sets:
-      b.sets.length > 0
-        ? b.sets.map((s) => ({
-            key: uid(),
-            exercise_id: s.exercise_id,
-            exercise_name: s.exercise_name,
-            reps: s.reps?.toString() ?? "",
-            weight_kg: s.weight_kg?.toString() ?? "",
-            distance_m: s.distance_m?.toString() ?? "",
-            duration_seconds: s.duration_seconds?.toString() ?? "",
-            calories: s.calories?.toString() ?? "",
-            is_warmup: s.is_warmup,
-          }))
-        : [emptySet()],
-  }));
-}
 
 export default function WorkoutLogger({
   exercises,
@@ -268,32 +138,6 @@ export default function WorkoutLogger({
   // --- Speichern -------------------------------------------------------------
 
   function buildInput(): WorkoutInput {
-    const blockInputs: BlockInput[] = blocks.map((b) => {
-      const sets: SetInput[] = b.sets
-        .filter((s) => s.exercise_name.trim() !== "")
-        .map((s) => ({
-          exercise_id: s.exercise_id,
-          exercise_name: s.exercise_name.trim(),
-          reps: toInt(s.reps),
-          weight_kg: toNum(s.weight_kg),
-          distance_m: toInt(s.distance_m),
-          duration_seconds: toInt(s.duration_seconds),
-          calories: toInt(s.calories),
-          is_warmup: s.is_warmup,
-        }));
-      return {
-        mode: b.mode,
-        name: b.name.trim() || null,
-        duration_seconds: toInt(b.duration_seconds),
-        interval_seconds: toInt(b.interval_seconds),
-        rest_seconds: toInt(b.rest_seconds),
-        rounds: toInt(b.rounds),
-        result_rounds: toInt(b.result_rounds),
-        result_reps: toInt(b.result_reps),
-        result_seconds: parseTime(b.result_seconds),
-        sets,
-      };
-    });
     return {
       title: title.trim() || null,
       type,
@@ -301,7 +145,7 @@ export default function WorkoutLogger({
       notes: notes.trim() || null,
       perceived_effort: toInt(effort),
       total_duration_seconds: null,
-      blocks: blockInputs,
+      blocks: blocksToInput(blocks),
     };
   }
 
@@ -329,28 +173,9 @@ export default function WorkoutLogger({
     });
   }
 
-  function buildStructure(): TemplateBlock[] {
+  function buildStructure() {
     // Wie buildInput, aber ohne Ergebnisse (result_*) — die Vorlage ist ein Plan.
-    return blocks.map((b) => ({
-      mode: b.mode,
-      name: b.name.trim() || null,
-      duration_seconds: toInt(b.duration_seconds),
-      interval_seconds: toInt(b.interval_seconds),
-      rest_seconds: toInt(b.rest_seconds),
-      rounds: toInt(b.rounds),
-      sets: b.sets
-        .filter((s) => s.exercise_name.trim() !== "")
-        .map((s) => ({
-          exercise_id: s.exercise_id,
-          exercise_name: s.exercise_name.trim(),
-          reps: toInt(s.reps),
-          weight_kg: toNum(s.weight_kg),
-          distance_m: toInt(s.distance_m),
-          duration_seconds: toInt(s.duration_seconds),
-          calories: toInt(s.calories),
-          is_warmup: s.is_warmup,
-        })),
-    }));
+    return blocksToStructure(blocks);
   }
 
   function saveTemplate() {
