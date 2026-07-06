@@ -143,7 +143,11 @@ export function StrengthLogger({ draft }: { draft: WorkoutDraft }) {
             const exercise_name = patch.exercise_name ?? "";
             patchBlock(block.key, {
               name: exercise_name,
-              sets: block.sets.map((s) => ({ ...s, exercise_id, exercise_name })),
+              sets: (block.sets.length ? block.sets : [emptySet()]).map((s) => ({
+                ...s,
+                exercise_id,
+                exercise_name,
+              })),
             });
           }
 

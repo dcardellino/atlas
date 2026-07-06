@@ -176,8 +176,14 @@ describe("HyroxLogger", () => {
     });
     render(<HyroxLogger draft={draft} />);
 
-    // "m" und "kg" Felder vorhanden, "Sek." (duration) nicht (ist das Split-Feld)
+    // Split-Feld (mm:ss) ist vorhanden
     expect(screen.getByLabelText("Split (mm:ss)")).toBeInTheDocument();
-    expect(screen.queryByRole("spinbutton", { name: "Sek." })).not.toBeInTheDocument();
+    // Stationsmetriken "m" (distance) und "kg" (weight) sind vorhanden
+    expect(screen.getByLabelText("m")).toBeInTheDocument();
+    expect(screen.getByLabelText("kg")).toBeInTheDocument();
+    // "Sek." (duration als Stationsmetrik) ist NICHT vorhanden — die Produktion-
+    // filter (.filter((m) => m !== "duration")) hält sie raus. Würde man diesen
+    // Filter entfernen, würde das Label "Sek." gerendert und diese Assertion schlägt fehl.
+    expect(screen.queryByLabelText("Sek.")).not.toBeInTheDocument();
   });
 });

@@ -242,6 +242,17 @@ describe("isDraftDirty", () => {
     block.sets[0].exercise_name = "Kniebeuge";
     expect(isDraftDirty([block])).toBe(false);
   });
+
+  it("wird dirty wenn ein Satz nur rpe eingetragen hat", () => {
+    const blocks = defaultBlocksForType("strength", []);
+    blocks[0].sets[0].rpe = "8";
+    expect(isDraftDirty(blocks)).toBe(true);
+  });
+
+  it("frische defaultBlocksForType(hyrox) bleiben nicht dirty nach Hinzufügen des rpe-Checks (Preset hat rpe: '')", () => {
+    // Alle Sätze im Hyrox-Preset haben rpe: "" → isDraftDirty muss false zurückgeben
+    expect(isDraftDirty(defaultBlocksForType("hyrox", makeLibrary()))).toBe(false);
+  });
 });
 
 // --- blocksToInput ----------------------------------------------------------

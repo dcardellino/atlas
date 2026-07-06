@@ -198,4 +198,35 @@ describe("StrengthLogger", () => {
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "+ Übung" })).toBeInTheDocument();
   });
+
+  it("selecting an exercise on a 0-set card calls patchBlock with one set carrying the exercise", () => {
+    const block = { ...emptyBlock("straight"), key: "b1", sets: [] };
+    const library: Exercise[] = [
+      {
+        id: "ex1",
+        name: "Deadlift",
+        category: "strength",
+        metrics: ["reps", "weight"],
+        is_default: false,
+        archived_at: null,
+        created_at: "2026-01-01T00:00:00Z",
+      },
+    ];
+    const draft = makeDraft({ blocks: [block], library });
+    render(<StrengthLogger draft={draft} />);
+
+    fireEvent.change(screen.getByRole("combobox", { name: "Übung" }), {
+      target: { value: "ex1" },
+    });
+
+    expect(draft.patchBlock).toHaveBeenCalledTimes(1);
+    const [bKey, patch] = (draft.patchBlock as ReturnType<typeof vi.fn>).mock.calls[0] as [
+      string,
+      { name: string; sets: Array<{ exercise_id: string; exercise_name: string }> },
+    ];
+    expect(bKey).toBe("b1");
+    expect(patch.sets).toHaveLength(1);
+    expect(patch.sets[0].exercise_id).toBe("ex1");
+    expect(patch.sets[0].exercise_name).toBe("Deadlift");
+  });
 });

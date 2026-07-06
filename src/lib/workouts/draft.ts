@@ -357,6 +357,7 @@ export function isDraftDirty(blocks: BlockDraft[]): boolean {
       if (set.distance_m.trim() !== "") return true;
       if (set.duration_seconds.trim() !== "") return true;
       if (set.calories.trim() !== "") return true;
+      if (set.rpe.trim() !== "") return true;
     }
   }
   return false;
