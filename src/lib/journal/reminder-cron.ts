@@ -21,7 +21,7 @@ type SettingsRow = {
   evening_last_sent_on: string | null;
 };
 
-type ReminderDb = {
+export type ReminderDb = {
   from: (table: string) => {
     select: (columns: string) => Promise<{ data: unknown; error: unknown }>;
     update: (values: Record<string, unknown>) => {
