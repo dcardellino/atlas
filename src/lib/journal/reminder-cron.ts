@@ -1,4 +1,5 @@
 import "server-only";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { formatInTimeZone } from "date-fns-tz";
 import { sendTelegram } from "@/lib/notify/telegram";
 
@@ -21,15 +22,6 @@ type SettingsRow = {
   evening_last_sent_on: string | null;
 };
 
-export type ReminderDb = {
-  from: (table: string) => {
-    select: (columns: string) => Promise<{ data: unknown; error: unknown }>;
-    update: (values: Record<string, unknown>) => {
-      eq: (column: string, value: string) => Promise<{ data: unknown; error: unknown }>;
-    };
-  };
-};
-
 export function isDue(
   enabled: boolean,
   configuredTime: string,
@@ -47,7 +39,7 @@ function appUrl(): string {
 }
 
 export async function runJournalReminders(
-  db: ReminderDb,
+  db: SupabaseClient,
   now: Date,
 ): Promise<{ sent: number }> {
   const today = formatInTimeZone(now, TZ, "yyyy-MM-dd");

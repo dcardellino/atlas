@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isAuthorizedCron } from "@/lib/cron/auth";
-import { runJournalReminders, type ReminderDb } from "@/lib/journal/reminder-cron";
+import { runJournalReminders } from "@/lib/journal/reminder-cron";
 
 /**
  * Journal-reminder cron. Same shape as reminders/daily-summary/calendar-sync:
@@ -18,6 +18,6 @@ export async function GET(request: NextRequest) {
   }
 
   const db = createAdminClient();
-  const result = await runJournalReminders(db as unknown as ReminderDb, new Date());
+  const result = await runJournalReminders(db, new Date());
   return NextResponse.json(result);
 }

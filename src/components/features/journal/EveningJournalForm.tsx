@@ -30,15 +30,7 @@ export default function EveningJournalForm({ top3Tasks }: { top3Tasks: Task[] })
   const { show: showToast } = useToast();
 
   function save() {
-    if (
-      pending ||
-      !movedToday.trim() ||
-      !carriesToTomorrow.trim() ||
-      !remembering.trim() ||
-      !tomorrowFirstTask.trim()
-    ) {
-      return;
-    }
+    if (pending) return;
 
     startTransition(async () => {
       const answers: EveningAnswers = {
@@ -141,13 +133,7 @@ export default function EveningJournalForm({ top3Tasks }: { top3Tasks: Task[] })
         <button
           type="button"
           onClick={save}
-          disabled={
-            pending ||
-            !movedToday.trim() ||
-            !carriesToTomorrow.trim() ||
-            !remembering.trim() ||
-            !tomorrowFirstTask.trim()
-          }
+          disabled={pending}
           className="h-11 rounded-sm bg-on-surface px-5 font-mono text-label uppercase tracking-label text-surface transition-colors hover:bg-accent hover:text-on-accent disabled:opacity-60"
         >
           {pending ? "Speichere…" : "Speichern"}

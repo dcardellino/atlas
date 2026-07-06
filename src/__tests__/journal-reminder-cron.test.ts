@@ -70,7 +70,7 @@ describe("runJournalReminders", () => {
     ]);
 
     // 05:30 UTC = 07:30 CEST (Europe/Berlin, July → DST) — past the 07:00 threshold.
-    const result = await runJournalReminders(client, new Date("2026-07-06T05:30:00Z"));
+    const result = await runJournalReminders(client as never, new Date("2026-07-06T05:30:00Z"));
 
     expect(result.sent).toBe(1);
     expect(mocks.sendTelegram).toHaveBeenCalledTimes(1);
@@ -97,7 +97,7 @@ describe("runJournalReminders", () => {
       },
     ]);
 
-    const result = await runJournalReminders(client, new Date("2026-07-06T05:30:00Z"));
+    const result = await runJournalReminders(client as never, new Date("2026-07-06T05:30:00Z"));
 
     expect(result.sent).toBe(0);
     expect(mocks.sendTelegram).not.toHaveBeenCalled();
@@ -118,7 +118,7 @@ describe("runJournalReminders", () => {
       },
     ]);
 
-    const result = await runJournalReminders(client, new Date("2026-07-06T05:30:00Z"));
+    const result = await runJournalReminders(client as never, new Date("2026-07-06T05:30:00Z"));
 
     expect(result.sent).toBe(0);
     expect(updates).toHaveLength(0);
