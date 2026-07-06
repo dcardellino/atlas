@@ -1,16 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import {
-  formatTime,
-  toInt,
-  parseTime,
-  type SetDraft,
-} from "@/lib/workouts/draft";
+import { type SetDraft } from "@/lib/workouts/draft";
 import type { Exercise, SetMetric } from "@/lib/workouts/types";
 import type { WorkoutDraft } from "../useWorkoutDraft";
 import { ExercisePicker } from "../ExercisePicker";
 import { numInput, fieldLabel } from "../fieldStyles";
+import { TimeField } from "../TimeField";
 
 // Metrik-Label und Feld-Mapping (identisch zu StrengthLogger/SetRow)
 const metricLabel: Record<SetMetric, string> = {
@@ -57,9 +52,6 @@ function SegmentRow({
   onRemove: () => void;
   onExerciseCreated: (ex: Exercise) => void;
 }) {
-  // Lokaler mm:ss-Display-State; initialisiert aus den gespeicherten Sekunden
-  const [split, setSplit] = useState(formatTime(toInt(set.duration_seconds)));
-
   return (
     <li className="rounded-sm border border-border bg-surface p-2">
       <div className="flex items-center gap-2">
@@ -76,21 +68,13 @@ function SegmentRow({
           onExerciseCreated={onExerciseCreated}
         />
 
-        {/* Split-Zeit im mm:ss-Format */}
+        {/* Split-Zeit im mm:ss-Format — nutzt das geteilte TimeField-Atom */}
         <label className="flex w-24 shrink-0 flex-col">
           <span className={fieldLabel}>Split</span>
-          <input
-            aria-label="Split (mm:ss)"
-            value={split}
-            onChange={(e) => {
-              const v = e.target.value;
-              setSplit(v);
-              // Sekunden zurückschreiben (kompatibel zu blocksToInput/parseTime)
-              const parsed = parseTime(v);
-              onPatch({ duration_seconds: parsed != null ? String(parsed) : "" });
-            }}
-            placeholder="mm:ss"
-            className={numInput}
+          <TimeField
+            ariaLabel="Split (mm:ss)"
+            value={set.duration_seconds}
+            onChange={(secs) => onPatch({ duration_seconds: secs })}
           />
         </label>
 
