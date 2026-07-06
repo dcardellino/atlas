@@ -25,6 +25,7 @@ export type SetDraft = {
   distance_m: string;
   duration_seconds: string;
   calories: string;
+  rpe: string;
   is_warmup: boolean;
 };
 
@@ -104,6 +105,7 @@ export function emptySet(): SetDraft {
     distance_m: "",
     duration_seconds: "",
     calories: "",
+    rpe: "",
     is_warmup: false,
   };
 }
@@ -155,6 +157,7 @@ export function detailToBlocks(detail: WorkoutDetail): BlockDraft[] {
             distance_m: s.distance_m?.toString() ?? "",
             duration_seconds: s.duration_seconds?.toString() ?? "",
             calories: s.calories?.toString() ?? "",
+            rpe: s.rpe?.toString() ?? "",
             is_warmup: s.is_warmup,
           }))
         : [emptySet()],
@@ -176,6 +179,7 @@ export function blocksToInput(blocks: BlockDraft[]): BlockInput[] {
         distance_m: toInt(s.distance_m),
         duration_seconds: toInt(s.duration_seconds),
         calories: toInt(s.calories),
+        rpe: toNum(s.rpe),
         is_warmup: s.is_warmup,
       }));
     return {
@@ -247,6 +251,7 @@ export function exerciseBlock(ex?: Exercise): BlockDraft {
         distance_m: "",
         duration_seconds: "",
         calories: "",
+        rpe: "",
         is_warmup: false,
       },
     ],
@@ -276,6 +281,7 @@ export function hyroxPresetBlocks(library: Exercise[]): BlockDraft[] {
       distance_m: "",
       duration_seconds: "",
       calories: "",
+      rpe: "",
       is_warmup: false,
     });
     // Station
@@ -288,6 +294,7 @@ export function hyroxPresetBlocks(library: Exercise[]): BlockDraft[] {
       distance_m: "",
       duration_seconds: "",
       calories: "",
+      rpe: "",
       is_warmup: false,
     });
   }

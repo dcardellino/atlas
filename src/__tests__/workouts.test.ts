@@ -195,6 +195,34 @@ describe("workout actions", () => {
     expect(ex!.values).toMatchObject({ user_id: "u1", name: "Thruster", is_default: false });
   });
 
+  it("createWorkout propagates rpe from SetInput into the workout_sets insert", async () => {
+    const { client, inserts } = makeClient({
+      tableSingle: { areas: { id: "area-fit" } },
+    });
+    mocks.createClient.mockResolvedValue(client);
+
+    await createWorkout({
+      type: "strength",
+      performed_on: "2026-07-06",
+      blocks: [
+        {
+          mode: "straight" as const,
+          name: "Kniebeuge",
+          sets: [
+            { exercise_id: "e1", exercise_name: "Kniebeuge", reps: 5, weight_kg: 100, rpe: 7.5 },
+            { exercise_id: "e1", exercise_name: "Kniebeuge", reps: 5, weight_kg: 100, rpe: null },
+          ],
+        },
+      ],
+    });
+
+    const sets = inserts.find((i) => i.table === "workout_sets");
+    const setRows = sets!.values as Record<string, unknown>[];
+    expect(setRows).toHaveLength(2);
+    expect(setRows[0].rpe).toBe(7.5);
+    expect(setRows[1].rpe).toBeNull();
+  });
+
   it("instantiateTemplate creates a workout with null result columns", async () => {
     const { client, inserts } = makeClient({
       tableSingle: {

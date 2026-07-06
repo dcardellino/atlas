@@ -230,6 +230,7 @@ async function insertBlocksAndSets(
         distance_m: s.distance_m ?? null,
         duration_seconds: s.duration_seconds ?? null,
         calories: s.calories ?? null,
+        rpe: s.rpe ?? null,
         is_warmup: s.is_warmup ?? false,
       });
     });

@@ -9,9 +9,10 @@ import {
   defaultBlocksForType,
   isDraftDirty,
   blocksToInput,
+  detailToBlocks,
 } from "./draft";
 import type { BlockDraft } from "./draft";
-import type { Exercise } from "./types";
+import type { Exercise, WorkoutDetail } from "./types";
 
 // --- Hilfsfunktionen zur Testerstellung -------------------------------------
 
@@ -276,5 +277,86 @@ describe("blocksToInput", () => {
     expect(set.distance_m).toBeNull();
     expect(set.duration_seconds).toBeNull();
     expect(set.calories).toBeNull();
+  });
+
+  it('reicht rpe als Dezimalzahl durch: "7.5" → 7.5', () => {
+    const block = emptyBlock("straight");
+    block.sets[0] = { ...block.sets[0], exercise_name: "Kniebeuge", rpe: "7.5" };
+    const input = blocksToInput([block]);
+    expect(input[0].sets[0].rpe).toBe(7.5);
+  });
+
+  it("reicht leeres rpe als null durch", () => {
+    const block = emptyBlock("straight");
+    block.sets[0] = { ...block.sets[0], exercise_name: "Kniebeuge", rpe: "" };
+    const input = blocksToInput([block]);
+    expect(input[0].sets[0].rpe).toBeNull();
+  });
+});
+
+// --- detailToBlocks (rpe Round-Trip) -----------------------------------------
+
+describe("detailToBlocks (rpe)", () => {
+  function makeDetail(rpe: number | null): WorkoutDetail {
+    return {
+      id: "w1",
+      area_id: null,
+      title: null,
+      type: "strength",
+      performed_on: "2026-07-06",
+      notes: null,
+      perceived_effort: null,
+      total_duration_seconds: null,
+      template_id: null,
+      created_at: "2026-07-06T00:00:00Z",
+      updated_at: "2026-07-06T00:00:00Z",
+      blocks: [
+        {
+          id: "b1",
+          workout_id: "w1",
+          mode: "straight",
+          name: null,
+          position: 0,
+          duration_seconds: null,
+          interval_seconds: null,
+          rest_seconds: null,
+          rounds: null,
+          result_rounds: null,
+          result_reps: null,
+          result_seconds: null,
+          notes: null,
+          created_at: "2026-07-06T00:00:00Z",
+          sets: [
+            {
+              id: "s1",
+              workout_id: "w1",
+              block_id: "b1",
+              exercise_id: "e1",
+              exercise_name: "Kniebeuge",
+              position: 0,
+              set_number: 1,
+              reps: 5,
+              weight_kg: 100,
+              distance_m: null,
+              duration_seconds: null,
+              calories: null,
+              rpe,
+              is_warmup: false,
+              created_at: "2026-07-06T00:00:00Z",
+            },
+          ],
+        },
+      ],
+    };
+  }
+
+  it('liest rpe 7.5 aus der DB-Row und gibt "7.5" als String zurück', () => {
+    const blocks = detailToBlocks(makeDetail(7.5));
+    expect(blocks[0].sets[0].rpe).toBe("7.5");
+  });
+
+  it("liest rpe null aus der DB-Row und gibt leeren String zurück", () => {
+    const blocks = detailToBlocks(makeDetail(null));
+    expect(blocks[0].sets[0].rpe).toBe("");
   });
 });

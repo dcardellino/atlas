@@ -133,6 +133,7 @@ export type WorkoutSet = {
   distance_m: number | null;
   duration_seconds: number | null;
   calories: number | null;
+  rpe: number | null;
   is_warmup: boolean;
   created_at: string;
 };
@@ -190,6 +191,7 @@ export type SetInput = {
   distance_m?: number | null;
   duration_seconds?: number | null;
   calories?: number | null;
+  rpe?: number | null;
   is_warmup?: boolean;
 };
 
