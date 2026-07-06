@@ -1,14 +1,8 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  createWorkout,
-  updateWorkout,
-  removeWorkout,
-  createExercise,
-  createTemplate,
-} from "@/lib/workouts/actions";
+import { createExercise } from "@/lib/workouts/actions";
 import {
   WORKOUT_TYPES,
   WORKOUT_TYPE_LABEL,
@@ -22,22 +16,14 @@ import {
   type WorkoutDetail,
   type WorkoutMode,
   type WorkoutType,
-  type WorkoutInput,
 } from "@/lib/workouts/types";
 import {
-  toInt,
-  todayIso,
-  emptySet,
   emptyBlock,
-  detailToBlocks,
-  blocksToInput,
-  blocksToStructure,
   type SetDraft,
   type BlockDraft,
 } from "@/lib/workouts/draft";
-import { WorkoutFormSchema, fieldErrors } from "@/lib/schemas/forms";
-import { useToast } from "@/components/ui/Toast";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import { useWorkoutDraft } from "./useWorkoutDraft";
 
 /**
  * Workout-Logger (Anlegen + Bearbeiten). Nachträgliches Protokollieren: Kopf
@@ -61,142 +47,37 @@ export default function WorkoutLogger({
   workout?: WorkoutDetail;
 }) {
   const router = useRouter();
-  const { show: showToast } = useToast();
-  const [pending, startTransition] = useTransition();
   const [confirming, setConfirming] = useState(false);
   const [savingTemplate, setSavingTemplate] = useState(false);
   const [templateName, setTemplateName] = useState("");
-  const [errors, setErrors] = useState<Record<string, string> | null>(null);
 
-  const [library, setLibrary] = useState<Exercise[]>(exercises);
-  const [type, setType] = useState<WorkoutType>(workout?.type ?? "strength");
-  const [performedOn, setPerformedOn] = useState(
-    workout?.performed_on ?? todayIso(),
-  );
-  const [title, setTitle] = useState(workout?.title ?? "");
-  const [effort, setEffort] = useState(
-    workout?.perceived_effort?.toString() ?? "",
-  );
-  const [notes, setNotes] = useState(workout?.notes ?? "");
-  const [blocks, setBlocks] = useState<BlockDraft[]>(
-    workout ? detailToBlocks(workout) : [emptyBlock()],
-  );
-
-  const exerciseById = useMemo(() => {
-    const m = new Map<string, Exercise>();
-    for (const e of library) m.set(e.id, e);
-    return m;
-  }, [library]);
-
-  function metricsFor(set: SetDraft): SetMetric[] {
-    const ex = set.exercise_id ? exerciseById.get(set.exercise_id) : undefined;
-    return ex?.metrics ?? ["reps", "weight"];
-  }
-
-  // --- Block-/Set-Mutatoren --------------------------------------------------
-
-  function patchBlock(key: string, patch: Partial<BlockDraft>) {
-    setBlocks((bs) => bs.map((b) => (b.key === key ? { ...b, ...patch } : b)));
-  }
-  function patchSet(bKey: string, sKey: string, patch: Partial<SetDraft>) {
-    setBlocks((bs) =>
-      bs.map((b) =>
-        b.key === bKey
-          ? {
-              ...b,
-              sets: b.sets.map((s) =>
-                s.key === sKey ? { ...s, ...patch } : s,
-              ),
-            }
-          : b,
-      ),
-    );
-  }
-  function addBlock() {
-    setBlocks((bs) => [...bs, emptyBlock()]);
-  }
-  function removeBlock(key: string) {
-    setBlocks((bs) => bs.filter((b) => b.key !== key));
-  }
-  function addSet(bKey: string) {
-    setBlocks((bs) =>
-      bs.map((b) =>
-        b.key === bKey ? { ...b, sets: [...b.sets, emptySet()] } : b,
-      ),
-    );
-  }
-  function removeSet(bKey: string, sKey: string) {
-    setBlocks((bs) =>
-      bs.map((b) =>
-        b.key === bKey
-          ? { ...b, sets: b.sets.filter((s) => s.key !== sKey) }
-          : b,
-      ),
-    );
-  }
-
-  // --- Speichern -------------------------------------------------------------
-
-  function buildInput(): WorkoutInput {
-    return {
-      title: title.trim() || null,
-      type,
-      performed_on: performedOn,
-      notes: notes.trim() || null,
-      perceived_effort: toInt(effort),
-      total_duration_seconds: null,
-      blocks: blocksToInput(blocks),
-    };
-  }
-
-  function save() {
-    const errs = fieldErrors(WorkoutFormSchema, {
-      title,
-      type,
-      performed_on: performedOn,
-      notes,
-      perceived_effort: effort,
-    });
-    setErrors(errs);
-    if (errs) return;
-    const input = buildInput();
-    startTransition(async () => {
-      if (workout) {
-        await updateWorkout(workout.id, input);
-        showToast("Workout gespeichert");
-        router.push(`/workouts/${workout.id}`);
-      } else {
-        const created = await createWorkout(input);
-        showToast("Workout angelegt");
-        router.push(`/workouts/${created.id}`);
-      }
-    });
-  }
-
-  function buildStructure() {
-    // Wie buildInput, aber ohne Ergebnisse (result_*) — die Vorlage ist ein Plan.
-    return blocksToStructure(blocks);
-  }
-
-  function saveTemplate() {
-    const name = templateName.trim();
-    if (name === "") return;
-    startTransition(async () => {
-      await createTemplate({ name, type, structure: buildStructure() });
-      setSavingTemplate(false);
-      setTemplateName("");
-      showToast("Als Vorlage gespeichert");
-    });
-  }
-
-  function doDelete() {
-    if (!workout) return;
-    startTransition(async () => {
-      await removeWorkout(workout.id);
-      showToast("Workout gelöscht");
-      router.push("/workouts");
-    });
-  }
+  const {
+    library,
+    type,
+    performedOn,
+    title,
+    effort,
+    notes,
+    blocks,
+    errors,
+    pending,
+    setType,
+    setPerformedOn,
+    setTitle,
+    setEffort,
+    setNotes,
+    patchBlock,
+    patchSet,
+    addBlock,
+    removeBlock,
+    addSet,
+    removeSet,
+    metricsFor,
+    onExerciseCreated,
+    save,
+    saveTemplate,
+    doDelete,
+  } = useWorkoutDraft({ exercises, workout });
 
   return (
     <section>
@@ -294,7 +175,7 @@ export default function WorkoutLogger({
             onPatchSet={(sKey, patch) => patchSet(block.key, sKey, patch)}
             onAddSet={() => addSet(block.key)}
             onRemoveSet={(sKey) => removeSet(block.key, sKey)}
-            onExerciseCreated={(ex) => setLibrary((l) => [...l, ex])}
+            onExerciseCreated={onExerciseCreated}
           />
         ))}
       </div>
@@ -373,7 +254,12 @@ export default function WorkoutLogger({
               <button
                 type="button"
                 disabled={pending || templateName.trim() === ""}
-                onClick={saveTemplate}
+                onClick={() =>
+                  saveTemplate(templateName.trim(), () => {
+                    setSavingTemplate(false);
+                    setTemplateName("");
+                  })
+                }
                 className="h-11 rounded-sm bg-on-surface px-4 font-mono text-label uppercase tracking-label text-surface transition-colors hover:bg-accent hover:text-on-accent disabled:opacity-50"
               >
                 Speichern
