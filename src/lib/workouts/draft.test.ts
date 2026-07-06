@@ -292,6 +292,20 @@ describe("blocksToInput", () => {
     const input = blocksToInput([block]);
     expect(input[0].sets[0].rpe).toBeNull();
   });
+
+  it('parst duration_seconds als mm:ss: "12:30" → 750 (Hyrox-Split)', () => {
+    const block = emptyBlock("for_time");
+    block.sets[0] = { ...block.sets[0], exercise_name: "SkiErg", duration_seconds: "12:30" };
+    const input = blocksToInput([block]);
+    expect(input[0].sets[0].duration_seconds).toBe(750);
+  });
+
+  it('parst duration_seconds als Sekunden: "90" → 90 (abwärtskompatibel, WOD/other "Sek.")', () => {
+    const block = emptyBlock("straight");
+    block.sets[0] = { ...block.sets[0], exercise_name: "Plank", duration_seconds: "90" };
+    const input = blocksToInput([block]);
+    expect(input[0].sets[0].duration_seconds).toBe(90);
+  });
 });
 
 // --- detailToBlocks (rpe Round-Trip) -----------------------------------------

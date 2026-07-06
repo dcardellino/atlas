@@ -177,7 +177,9 @@ export function blocksToInput(blocks: BlockDraft[]): BlockInput[] {
         reps: toInt(s.reps),
         weight_kg: toNum(s.weight_kg),
         distance_m: toInt(s.distance_m),
-        duration_seconds: toInt(s.duration_seconds),
+        // parseTime ist abwärtskompatibel zu toInt: parseTime("90") === 90;
+        // zusätzlich erlaubt es mm:ss-Eingaben aus HyroxLogger: parseTime("12:30") === 750.
+        duration_seconds: parseTime(s.duration_seconds),
         calories: toInt(s.calories),
         rpe: toNum(s.rpe),
         is_warmup: s.is_warmup,
