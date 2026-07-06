@@ -12,13 +12,12 @@ import {
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { useWorkoutDraft } from "./useWorkoutDraft";
 import { fieldLabel, fieldInput } from "./fieldStyles";
-import { BlockCard } from "./BlockCard";
+import { WorkoutBody } from "./loggers/WorkoutBody";
 
 /**
- * Workout-Logger (Anlegen + Bearbeiten). Nachträgliches Protokollieren: Kopf
- * (Typ/Datum/Aufwand/Notiz), dann Blöcke, jeder mit einem Modus (EMOM/AMRAP/
- * Tabata/For Time/Sätze) und seinen Sätzen. Speichert verschachtelt über die
- * Server Action; kein Live-Timer.
+ * Workout-Logger (Anlegen + Bearbeiten). Rendert Kopf (Typ/Datum/Aufwand/Notiz),
+ * dann den typspezifischen Body (WorkoutBody), Aktionsleiste und Modals.
+ * Der Typwechsel-Flow fragt bei dirty Draft nach Bestätigung (Reset-Rückfrage).
  */
 
 export default function WorkoutLogger({
@@ -32,34 +31,23 @@ export default function WorkoutLogger({
   const [confirming, setConfirming] = useState(false);
   const [savingTemplate, setSavingTemplate] = useState(false);
   const [templateName, setTemplateName] = useState("");
+  // Typwechsel-Flow: hält den angefragten neuen Typ bis zur Nutzerbestätigung
+  const [pendingType, setPendingType] = useState<WorkoutType | null>(null);
 
-  const {
-    library,
-    type,
-    performedOn,
-    title,
-    effort,
-    notes,
-    blocks,
-    errors,
-    pending,
-    setType,
-    setPerformedOn,
-    setTitle,
-    setEffort,
-    setNotes,
-    patchBlock,
-    patchSet,
-    addBlock,
-    removeBlock,
-    addSet,
-    removeSet,
-    metricsFor,
-    onExerciseCreated,
-    save,
-    saveTemplate,
-    doDelete,
-  } = useWorkoutDraft({ exercises, workout });
+  const draft = useWorkoutDraft({ exercises, workout });
+
+  /**
+   * Startet den Typwechsel-Flow. Bei dirty Draft → Rückfrage (ConfirmDialog);
+   * bei sauberem Draft → sofortiges resetForType. Kein-op bei gleichem Typ.
+   */
+  function requestTypeChange(next: WorkoutType) {
+    if (next === draft.type) return;
+    if (draft.isDirty) {
+      setPendingType(next);
+    } else {
+      draft.resetForType(next);
+    }
+  }
 
   return (
     <section>
@@ -77,8 +65,8 @@ export default function WorkoutLogger({
         <label className="block">
           <span className={fieldLabel}>Typ</span>
           <select
-            value={type}
-            onChange={(e) => setType(e.target.value as WorkoutType)}
+            value={draft.type}
+            onChange={(e) => requestTypeChange(e.target.value as WorkoutType)}
             className={fieldInput}
           >
             {WORKOUT_TYPES.map((t) => (
@@ -92,14 +80,14 @@ export default function WorkoutLogger({
           <span className={fieldLabel}>Datum</span>
           <input
             type="date"
-            value={performedOn}
-            onChange={(e) => setPerformedOn(e.target.value)}
-            aria-invalid={Boolean(errors?.performed_on)}
+            value={draft.performedOn}
+            onChange={(e) => draft.setPerformedOn(e.target.value)}
+            aria-invalid={Boolean(draft.errors?.performed_on)}
             className={fieldInput}
           />
-          {errors?.performed_on && (
+          {draft.errors?.performed_on && (
             <span className="mt-1 block text-body-sm text-danger">
-              {errors.performed_on}
+              {draft.errors.performed_on}
             </span>
           )}
         </label>
@@ -108,8 +96,8 @@ export default function WorkoutLogger({
       <label className="mt-3 block">
         <span className={fieldLabel}>Titel (optional)</span>
         <input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
+          value={draft.title}
+          onChange={(e) => draft.setTitle(e.target.value)}
           placeholder="z. B. Push Day, Hyrox-Simulation"
           className={fieldInput}
         />
@@ -120,14 +108,14 @@ export default function WorkoutLogger({
           <span className={fieldLabel}>Aufwand (RPE 1–10)</span>
           <input
             inputMode="numeric"
-            value={effort}
-            onChange={(e) => setEffort(e.target.value)}
-            aria-invalid={Boolean(errors?.perceived_effort)}
+            value={draft.effort}
+            onChange={(e) => draft.setEffort(e.target.value)}
+            aria-invalid={Boolean(draft.errors?.perceived_effort)}
             className={fieldInput}
           />
-          {errors?.perceived_effort && (
+          {draft.errors?.perceived_effort && (
             <span className="mt-1 block text-body-sm text-danger">
-              {errors.perceived_effort}
+              {draft.errors.perceived_effort}
             </span>
           )}
         </label>
@@ -136,53 +124,29 @@ export default function WorkoutLogger({
       <label className="mt-3 block">
         <span className={fieldLabel}>Notiz (optional)</span>
         <textarea
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
+          value={draft.notes}
+          onChange={(e) => draft.setNotes(e.target.value)}
           rows={2}
           className={fieldInput}
         />
       </label>
 
-      {/* Blöcke */}
-      <div className="mt-8 space-y-4">
-        {blocks.map((block, bi) => (
-          <BlockCard
-            key={block.key}
-            block={block}
-            index={bi}
-            library={library}
-            metricsFor={metricsFor}
-            onPatch={(patch) => patchBlock(block.key, patch)}
-            onRemove={() => removeBlock(block.key)}
-            onPatchSet={(sKey, patch) => patchSet(block.key, sKey, patch)}
-            onAddSet={() => addSet(block.key)}
-            onRemoveSet={(sKey) => removeSet(block.key, sKey)}
-            onExerciseCreated={onExerciseCreated}
-          />
-        ))}
-      </div>
-
-      <button
-        type="button"
-        onClick={() => addBlock()}
-        className="mt-4 h-11 w-full rounded-sm border border-border bg-surface-raised px-4 font-mono text-label uppercase tracking-label text-on-surface transition-colors hover:border-accent hover:text-accent"
-      >
-        + Block hinzufügen
-      </button>
+      {/* Typspezifischer Body — kein zusätzlicher mt-Container, Bodies bringen mt-8 mit */}
+      <WorkoutBody draft={draft} />
 
       {/* Aktionen */}
       <div className="mt-8 flex items-center gap-3">
         <button
           type="button"
-          disabled={pending}
-          onClick={save}
+          disabled={draft.pending}
+          onClick={draft.save}
           className="h-11 rounded-sm bg-on-surface px-5 font-mono text-label uppercase tracking-label text-surface transition-colors hover:bg-accent hover:text-on-accent disabled:opacity-50"
         >
           {workout ? "Speichern" : "Anlegen"}
         </button>
         <button
           type="button"
-          disabled={pending}
+          disabled={draft.pending}
           onClick={() => router.back()}
           className="h-11 rounded-sm px-4 font-mono text-label uppercase tracking-label text-on-surface-muted transition-colors hover:text-on-surface"
         >
@@ -190,7 +154,7 @@ export default function WorkoutLogger({
         </button>
         <button
           type="button"
-          disabled={pending}
+          disabled={draft.pending}
           onClick={() => setSavingTemplate(true)}
           className="ml-auto h-11 rounded-sm px-3 font-mono text-label uppercase tracking-label text-on-surface-muted transition-colors hover:text-accent"
         >
@@ -199,7 +163,7 @@ export default function WorkoutLogger({
         {workout && (
           <button
             type="button"
-            disabled={pending}
+            disabled={draft.pending}
             onClick={() => setConfirming(true)}
             className="h-11 rounded-sm px-4 font-mono text-label uppercase tracking-label text-danger transition-colors hover:underline"
           >
@@ -235,9 +199,9 @@ export default function WorkoutLogger({
               </button>
               <button
                 type="button"
-                disabled={pending || templateName.trim() === ""}
+                disabled={draft.pending || templateName.trim() === ""}
                 onClick={() =>
-                  saveTemplate(templateName.trim(), () => {
+                  draft.saveTemplate(templateName.trim(), () => {
                     setSavingTemplate(false);
                     setTemplateName("");
                   })
@@ -251,6 +215,7 @@ export default function WorkoutLogger({
         </div>
       )}
 
+      {/* Löschen-Rückfrage */}
       {confirming && (
         <ConfirmDialog
           title="Workout löschen?"
@@ -258,12 +223,25 @@ export default function WorkoutLogger({
           confirmLabel="Löschen"
           onConfirm={() => {
             setConfirming(false);
-            doDelete();
+            draft.doDelete();
           }}
           onCancel={() => setConfirming(false)}
+        />
+      )}
+
+      {/* Typwechsel-Rückfrage: erscheint wenn isDirty und neuer Typ ausgewählt */}
+      {pendingType && (
+        <ConfirmDialog
+          title="Typ wechseln?"
+          message="Die aktuelle Erfassung wird zurückgesetzt."
+          confirmLabel="Wechseln"
+          onConfirm={() => {
+            draft.resetForType(pendingType);
+            setPendingType(null);
+          }}
+          onCancel={() => setPendingType(null)}
         />
       )}
     </section>
   );
 }
-

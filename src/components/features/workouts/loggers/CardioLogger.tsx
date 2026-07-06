@@ -125,7 +125,7 @@ export function CardioLogger({ draft }: { draft: WorkoutDraft }) {
 
   return (
     <div>
-      <ul className="mt-4 space-y-2">
+      <ul className="mt-8 space-y-2">
         {block.sets.map((set, si) => (
           <IntervalRow
             key={set.key}

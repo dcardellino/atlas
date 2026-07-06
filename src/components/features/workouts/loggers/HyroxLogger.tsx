@@ -139,7 +139,7 @@ export function HyroxLogger({ draft }: { draft: WorkoutDraft }) {
   return (
     <div>
       {/* Gesamtzeit: prominent oben, mm:ss → result_seconds */}
-      <div className="mt-4">
+      <div className="mt-8">
         <label>
           <span className={fieldLabel}>Gesamtzeit (mm:ss)</span>
           <input
