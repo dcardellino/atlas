@@ -19,7 +19,9 @@ import {
   WeeklyProgress,
   DailyProgress,
 } from "@/components/features/routines/StreakChart";
+import Link from "next/link";
 import type { TodaySummary, RecentInboxItem } from "@/lib/today/summary";
+import { WORKOUT_TYPE_LABEL } from "@/lib/workouts/types";
 import type { CalendarEvent, CalendarState } from "@/lib/calendar/types";
 import EmptyState from "@/components/ui/EmptyState";
 import Reclassify from "@/components/features/capture/Reclassify";
@@ -248,7 +250,8 @@ export default function TodayView({
     data.dueToday.length === 0 &&
     data.recentInbox.length === 0 &&
     data.routines.length === 0 &&
-    data.calendarEvents.length === 0;
+    data.calendarEvents.length === 0 &&
+    data.todayWorkout == null;
 
   return (
     <section>
@@ -294,6 +297,32 @@ export default function TodayView({
               ))}
             </Section>
           )}
+          <Section title="Training">
+            <li className="flex items-center gap-3 border-b border-border py-3">
+              {data.todayWorkout ? (
+                <Link
+                  href={`/workouts/${data.todayWorkout.id}`}
+                  className="flex-1 text-body text-on-surface transition-colors hover:text-accent"
+                >
+                  {data.todayWorkout.title ||
+                    WORKOUT_TYPE_LABEL[
+                      data.todayWorkout.type as keyof typeof WORKOUT_TYPE_LABEL
+                    ] ||
+                    "Workout"}
+                  <span className="ml-2 font-mono text-meta uppercase tracking-label text-on-surface-muted">
+                    heute
+                  </span>
+                </Link>
+              ) : (
+                <Link
+                  href="/workouts/new"
+                  className="flex-1 font-mono text-meta uppercase tracking-label text-on-surface-muted transition-colors hover:text-accent"
+                >
+                  + Workout protokollieren
+                </Link>
+              )}
+            </li>
+          </Section>
           {data.calendarEvents.length > 0 && (
             <Section title="Kalender">
               {data.calendarEvents.map((ev) => (

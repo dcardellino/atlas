@@ -1,5 +1,11 @@
 import { z } from "zod";
 import { TIMES_OF_DAY } from "@/lib/routines/types";
+import {
+  EXERCISE_CATEGORIES,
+  SET_METRICS,
+  WORKOUT_MODES,
+  WORKOUT_TYPES,
+} from "@/lib/workouts/types";
 
 /**
  * Shared zod schemas for the editor forms (TASK-052). Same rules run in the
@@ -74,6 +80,71 @@ export const JournalFormSchema = z.object({
     .min(1, "Schreib oder sprich zuerst etwas.")
     .max(BODY_MAX, `Höchstens ${BODY_MAX} Zeichen.`),
 });
+
+// --- Workout-Tracker ---------------------------------------------------------
+
+const EXERCISE_NAME_MAX = 160;
+
+// Ganze Zahl aus einem Formularfeld, oder leer → undefined (wie duration_days).
+const optionalPositiveInt = (max: number, label: string) =>
+  z
+    .string()
+    .regex(/^\d+$/, "Nur ganze Zahlen.")
+    .refine((v) => Number(v) >= 1 && Number(v) <= max, label)
+    .optional()
+    .or(z.literal("").transform(() => undefined));
+
+export const ExerciseFormSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, "Pflichtfeld.")
+    .max(EXERCISE_NAME_MAX, `Höchstens ${EXERCISE_NAME_MAX} Zeichen.`),
+  category: z.enum(EXERCISE_CATEGORIES),
+  metrics: z.array(z.enum(SET_METRICS)).min(1, "Mindestens eine Metrik."),
+});
+
+export const WorkoutFormSchema = z.object({
+  title: optionalText(TITLE_MAX),
+  type: z.enum(WORKOUT_TYPES),
+  performed_on: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Datum fehlt."),
+  notes: optionalText(NOTES_MAX),
+  perceived_effort: optionalPositiveInt(10, "1 bis 10."),
+});
+
+export const TemplateFormSchema = z.object({
+  name: requiredName,
+  type: z.enum(WORKOUT_TYPES),
+  notes: optionalText(NOTES_MAX),
+});
+
+// Struktur einer Vorlage (JSONB). Postgres erzwingt die Form nicht, daher hier.
+const TemplateSetSchema = z.object({
+  exercise_id: z.string().nullable().optional(),
+  exercise_name: z.string().trim().min(1).max(EXERCISE_NAME_MAX),
+  set_number: z.number().int().nullable().optional(),
+  reps: z.number().int().nullable().optional(),
+  weight_kg: z.number().nullable().optional(),
+  distance_m: z.number().int().nullable().optional(),
+  duration_seconds: z.number().int().nullable().optional(),
+  calories: z.number().int().nullable().optional(),
+  is_warmup: z.boolean().optional(),
+});
+
+const TemplateBlockSchema = z.object({
+  mode: z.enum(WORKOUT_MODES),
+  name: z.string().nullable().optional(),
+  duration_seconds: z.number().int().nullable().optional(),
+  interval_seconds: z.number().int().nullable().optional(),
+  rest_seconds: z.number().int().nullable().optional(),
+  rounds: z.number().int().nullable().optional(),
+  notes: z.string().nullable().optional(),
+  sets: z.array(TemplateSetSchema),
+});
+
+export const TemplateStructureSchema = z.array(TemplateBlockSchema);
 
 /**
  * Run a schema and return a flat `{ field: message }` map of the first error per
