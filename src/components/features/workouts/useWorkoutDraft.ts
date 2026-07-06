@@ -67,7 +67,7 @@ export type WorkoutDraft = {
   patchSet: (bKey: string, sKey: string, patch: Partial<SetDraft>) => void;
   addBlock: (mode?: WorkoutMode) => void;
   removeBlock: (key: string) => void;
-  addSet: (bKey: string) => void;
+  addSet: (bKey: string, seed?: Partial<SetDraft>) => void;
   removeSet: (bKey: string, sKey: string) => void;
 
   /** Liefert die trackbaren Metriken für einen Satz, basierend auf der Übung. */
@@ -169,10 +169,12 @@ export function useWorkoutDraft({
   function removeBlock(key: string) {
     setBlocks((bs) => bs.filter((b) => b.key !== key));
   }
-  function addSet(bKey: string) {
+  function addSet(bKey: string, seed?: Partial<SetDraft>) {
     setBlocks((bs) =>
       bs.map((b) =>
-        b.key === bKey ? { ...b, sets: [...b.sets, emptySet()] } : b,
+        b.key === bKey
+          ? { ...b, sets: [...b.sets, { ...emptySet(), ...seed }] }
+          : b,
       ),
     );
   }
