@@ -276,7 +276,6 @@ describe("blocksToInput", () => {
       distance_m: "",
       duration_seconds: "",
       calories: "",
-      is_warmup: false,
     };
     const input = blocksToInput([block]);
     expect(input[0].sets).toHaveLength(1);
@@ -366,7 +365,6 @@ describe("detailToBlocks (rpe)", () => {
               duration_seconds: null,
               calories: null,
               rpe,
-              is_warmup: false,
               created_at: "2026-07-06T00:00:00Z",
             },
           ],

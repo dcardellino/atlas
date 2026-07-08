@@ -83,7 +83,7 @@ export default function WorkoutLogger({
             value={draft.performedOn}
             onChange={(e) => draft.setPerformedOn(e.target.value)}
             aria-invalid={Boolean(draft.errors?.performed_on)}
-            className={fieldInput}
+            className={`${fieldInput} min-h-[42px] appearance-none text-left`}
           />
           {draft.errors?.performed_on && (
             <span className="mt-1 block text-body-sm text-danger">

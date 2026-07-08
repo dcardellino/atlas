@@ -24,7 +24,6 @@ export type StatSet = {
   weight_kg: number | null;
   distance_m: number | null;
   duration_seconds: number | null;
-  is_warmup: boolean;
 };
 
 /** Geschätztes 1RM nach Epley. null, wenn Gewicht/Wdh. fehlen. */
@@ -51,7 +50,6 @@ function workoutDate(workouts: StatWorkout[]): Map<string, string> {
 
 /**
  * Gesamtvolumen (Σ reps×weight) je Trainingstag, aufsteigend nach Datum.
- * Aufwärmsätze zählen mit — reines Trainingsvolumen.
  */
 export function volumeBySession(
   workouts: StatWorkout[],
@@ -88,8 +86,7 @@ export function frequencyByWeek(
 
 /**
  * Progression einer Übung über die Zeit: je Trainingstag das schwerste Gewicht
- * und das beste geschätzte 1RM. Aufwärmsätze werden ignoriert, damit die Kurve
- * die Arbeitssätze zeigt.
+ * und das beste geschätzte 1RM.
  */
 export function exerciseProgression(
   workouts: StatWorkout[],
@@ -99,7 +96,6 @@ export function exerciseProgression(
   const dateOf = workoutDate(workouts);
   const byDate = new Map<string, { maxWeight: number; estOneRepMax: number }>();
   for (const s of sets) {
-    if (s.is_warmup) continue;
     if (s.exercise_name !== exerciseName) continue;
     if (s.weight_kg == null) continue;
     const date = dateOf.get(s.workout_id);
@@ -155,8 +151,8 @@ export type PersonalRecord = {
 };
 
 /**
- * Persönliche Rekorde je Übung, abgeleitet aus allen Sätzen. Arbeitssätze wie
- * Aufwärmsätze zählen mit (ein PR ist ein PR). Alphabetisch nach Übungsname.
+ * Persönliche Rekorde je Übung, abgeleitet aus allen Sätzen (ein PR ist ein
+ * PR). Alphabetisch nach Übungsname.
  */
 export function personalRecords(sets: StatSet[]): PersonalRecord[] {
   const byExercise = new Map<string, PersonalRecord>();

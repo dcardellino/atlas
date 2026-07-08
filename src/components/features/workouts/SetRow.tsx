@@ -6,8 +6,8 @@ import { numInput } from "./fieldStyles";
 import { ExercisePicker } from "./ExercisePicker";
 
 /**
- * Eine Satz-Zeile innerhalb eines Blocks: Übungswahl, dynamische Metrik-Felder
- * (je nach metrics-Array) und Aufwärmen-Checkbox.
+ * Eine Satz-Zeile innerhalb eines Blocks: Übungswahl und dynamische
+ * Metrik-Felder (je nach metrics-Array).
  */
 export function SetRow({
   set,
@@ -72,16 +72,6 @@ export function SetRow({
             />
           </label>
         ))}
-        <label className="flex items-center gap-1 pb-1.5">
-          <input
-            type="checkbox"
-            checked={set.is_warmup}
-            onChange={(e) => onPatch({ is_warmup: e.target.checked })}
-          />
-          <span className="font-mono text-meta uppercase tracking-label text-on-surface-muted">
-            Aufwärmen
-          </span>
-        </label>
       </div>
     </li>
   );

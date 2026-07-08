@@ -31,7 +31,7 @@ function cardSetFor(block: BlockDraft): SetDraft {
 }
 
 /**
- * Kraft-Satz-Zeile: Satznr., dynamische Metrik-Felder, RPE-Feld, Aufwärmen-Checkbox,
+ * Kraft-Satz-Zeile: Satznr., dynamische Metrik-Felder, RPE-Feld,
  * Entfernen-Button. Keine Übungswahl — die Übung lebt im Kartenkopf.
  */
 function StrengthSetRow({
@@ -89,17 +89,6 @@ function StrengthSetRow({
             aria-label="RPE"
           />
         </label>
-        {/* Aufwärmen-Checkbox */}
-        <label className="flex items-center gap-1 pb-1.5">
-          <input
-            type="checkbox"
-            checked={set.is_warmup}
-            onChange={(e) => onPatch({ is_warmup: e.target.checked })}
-          />
-          <span className="font-mono text-meta uppercase tracking-label text-on-surface-muted">
-            Aufwärmen
-          </span>
-        </label>
       </div>
     </li>
   );
@@ -107,9 +96,9 @@ function StrengthSetRow({
 
 /**
  * Kraft-Body: eine Übungskarte pro Block — Übung im Kartenkopf, darunter
- * Sätze mit Wdh × Gewicht × RPE × Aufwärmen. Kein Modus-Dropdown, kein
- * ModeConfig. Legacy-tolerant: Kartenkopf zeigt Übung des ersten Satzes;
- * Blöcke mit 0 Sätzen und gemischte Übungen rendern ohne Crash.
+ * Sätze mit Wdh × Gewicht × RPE. Kein Modus-Dropdown, kein ModeConfig.
+ * Legacy-tolerant: Kartenkopf zeigt Übung des ersten Satzes; Blöcke mit
+ * 0 Sätzen und gemischte Übungen rendern ohne Crash.
  */
 export function StrengthLogger({ draft }: { draft: WorkoutDraft }) {
   const {

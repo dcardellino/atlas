@@ -231,7 +231,6 @@ async function insertBlocksAndSets(
         duration_seconds: s.duration_seconds ?? null,
         calories: s.calories ?? null,
         rpe: s.rpe ?? null,
-        is_warmup: s.is_warmup ?? false,
       });
     });
   });
@@ -428,7 +427,6 @@ export async function instantiateTemplate(
       distance_m: s.distance_m ?? null,
       duration_seconds: s.duration_seconds ?? null,
       calories: s.calories ?? null,
-      is_warmup: s.is_warmup ?? false,
     })),
   }));
 
@@ -454,7 +452,6 @@ export async function loadStatsData(): Promise<{
     weight_kg: number | null;
     distance_m: number | null;
     duration_seconds: number | null;
-    is_warmup: boolean;
   }[];
 }> {
   const { supabase, userId } = await requireUser();
@@ -466,7 +463,7 @@ export async function loadStatsData(): Promise<{
     supabase
       .from("workout_sets")
       .select(
-        "workout_id, exercise_name, reps, weight_kg, distance_m, duration_seconds, is_warmup",
+        "workout_id, exercise_name, reps, weight_kg, distance_m, duration_seconds",
       )
       .eq("user_id", userId),
   ]);
@@ -483,7 +480,6 @@ export async function loadStatsData(): Promise<{
       weight_kg: number | null;
       distance_m: number | null;
       duration_seconds: number | null;
-      is_warmup: boolean;
     }[]) ?? [],
   };
 }
