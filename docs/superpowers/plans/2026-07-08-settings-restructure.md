@@ -648,7 +648,7 @@ git commit -m "feat(settings): add Journal-Erinnerungen status subpage"
 ### Task 6: DB-Migration + CalendarSyncState-Typ
 
 **Files:**
-- Create: `supabase/migrations/0016_calendar_multi_select.sql`
+- Create: `supabase/migrations/0017_calendar_multi_select.sql`
 - Modify: `src/lib/calendar/types.ts`
 
 **Interfaces:**
@@ -657,7 +657,7 @@ git commit -m "feat(settings): add Journal-Erinnerungen status subpage"
 - [ ] **Step 1: Write the migration**
 
 ```sql
--- supabase/migrations/0016_calendar_multi_select.sql
+-- supabase/migrations/0017_calendar_multi_select.sql
 -- Atlas — Kalender-Mehrfachauswahl (Settings-Restructure).
 -- Erlaubt die Auswahl mehrerer Google-Kalender statt nur "primary". Idempotent;
 -- reloadet den PostgREST-Schema-Cache am Ende.
@@ -681,7 +681,7 @@ notify pgrst, 'reload schema';
 If working in a git worktree, run `supabase link` first (see Global Constraints). Then:
 
 Run: `supabase db push`
-Expected: migration `0016_calendar_multi_select.sql` applied cleanly.
+Expected: migration `0017_calendar_multi_select.sql` applied cleanly.
 
 - [ ] **Step 3: Verify the schema change**
 
@@ -719,7 +719,7 @@ Expected: no new errors
 - [ ] **Step 6: Commit**
 
 ```bash
-git add supabase/migrations/0016_calendar_multi_select.sql src/lib/calendar/types.ts
+git add supabase/migrations/0017_calendar_multi_select.sql src/lib/calendar/types.ts
 git commit -m "feat(calendar): add selected_calendar_ids column + 3-way unique constraint"
 ```
 
