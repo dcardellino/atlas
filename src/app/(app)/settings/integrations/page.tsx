@@ -1,6 +1,7 @@
 import SettingsHeader from "@/components/features/settings/SettingsHeader";
 import IntegrationStatus from "@/components/features/settings/IntegrationStatus";
-import { getSyncState } from "@/lib/calendar/actions";
+import CalendarSelector from "@/components/features/settings/CalendarSelector";
+import { getSyncState, listAvailableCalendars } from "@/lib/calendar/actions";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function SettingsIntegrationsPage() {
@@ -8,7 +9,10 @@ export default async function SettingsIntegrationsPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const syncState = await getSyncState();
+  const [syncState, calendars] = await Promise.all([
+    getSyncState(),
+    listAvailableCalendars(),
+  ]);
 
   return (
     <section>
@@ -26,6 +30,10 @@ export default async function SettingsIntegrationsPage() {
           ),
           timezone: process.env.CAPTURE_TZ ?? "Europe/Berlin",
         }}
+      />
+      <CalendarSelector
+        calendars={calendars}
+        initialSelected={syncState?.selected_calendar_ids ?? ["primary"]}
       />
     </section>
   );
