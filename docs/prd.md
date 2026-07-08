@@ -339,21 +339,13 @@ Acceptance Criteria:
 
 ## 6. Functional Requirements
 
-**FR-001: Capture-Endpoint mit KI-Klassifikation**
+**FR-001: Capture-Endpoint**
 Priority: P0
-Description: `/api/capture` nimmt Rohtext + Source, legt ein `inbox_item` an, ruft die Anthropic-Klassifikation auf und erzeugt den Zieleintrag mit `area_id` und ggf. `due_at`.
+Description: `/api/capture` nimmt Rohtext + Source entgegen und legt ihn als `inbox_item` (Notiz) an. Keine automatische Klassifikation (entfernt) — Tasks/Routinen/Journal-Einträge werden manuell über ihre jeweiligen Seiten angelegt.
 Acceptance Criteria:
-- Klassifikation liefert validiertes JSON `{type, title, due_at?, area_slug?}`.
-- Bei Parse-/Validierungsfehler Fallback auf Notiz in der Inbox, Response 207.
-- p95-Latenz < 5 s.
-Related Stories: US-001, US-002
-
-**FR-002: KI-Klassifikationslogik**
-Priority: P0
-Description: `lib/ai/classify.ts` mappt Rohtext auf Typ, Titel, Fälligkeit und passende Area (aus den existierenden Areas des Users). System-Prompt mit Few-Shot-Beispielen; Ausgabe striktes JSON.
-Acceptance Criteria:
-- Vorhandene Areas werden als Kontext mitgegeben; Klassifikation wählt eine existierende oder schlägt „unzugeordnet" vor.
-- Relative Zeitangaben („morgen 17 Uhr") werden in absolute `due_at` in der User-Zeitzone aufgelöst.
+- Jede valide Capture wird persistiert, nie verworfen.
+- Response liefert `{type: "note", id, title}`.
+Related Stories: US-001
 
 **FR-003: Today-View**
 Priority: P0
@@ -389,15 +381,11 @@ Description: Tasks mit `reminder_at` lösen einen ntfy-Push aus; Daily-Summary-C
 
 **FR-010: Google Calendar read-only**
 Priority: P1
-Description: Cron synct Kalendertermine read-only in einen Cache zur Anzeige im Today-View.
+Description: Cron synct Kalendertermine der vom User in den Settings ausgewählten Kalender (Default: primär) read-only in einen Cache zur Anzeige im Today-View.
 
 **FR-011: PWA-Installierbarkeit**
 Priority: P1
 Description: Manifest + Service Worker; installierbar auf iPhone-Homescreen; Lesezugriff auf bereits geladene Daten offline-tolerant.
-
-**FR-012: Reklassifikation / Korrektur**
-Priority: P2
-Description: Einen falsch einsortierten Eintrag in einen anderen Typ/Area verschieben; Korrektur wird (für spätere Prompt-Verbesserung) protokolliert.
 
 ## 7. Non-Functional Requirements
 
@@ -437,7 +425,7 @@ Components Used: `button-primary`, `card`, `checkbox`, `list-item`, `fab-capture
 Route: Overlay (kein eigener Pfad)
 Purpose: Reibungsloses Erfassen per Voice/Text.
 Layout: Zentriertes Overlay mit großem Textfeld + Mikrofon-Button; Voice nutzt Web Speech API in der PWA, Diktat-Action im iOS-Shortcut.
-States: Idle · Recording (Pulsanimation) · Submitting (Spinner) · Success (knappe Bestätigung mit Typ + Area) · Error.
+States: Idle · Recording (Pulsanimation) · Submitting (Spinner) · Success (knappe Bestätigung „In Inbox abgelegt") · Error.
 Key Interactions: Mic-Tap → aufnehmen; Enter/Senden → POST; nach Erfolg Auto-Close mit Toast.
 Components Used: `input-text`, `button-mic`, `toast`.
 
@@ -449,7 +437,7 @@ States: Empty · Loading · Populated · Error.
 Components Used: `segmented-control`, `list-item`, `checkbox`, `badge-area`.
 
 ### Screen: Areas
-Route: `/areas` · Purpose: Lebensbereiche anlegen/ordnen · Components: `card`, `drag-handle`, `button-primary`.
+Route: `/settings/areas` (Settings-Unterseite) · Purpose: Lebensbereiche anlegen/ordnen · Components: `card`, `drag-handle`, `button-primary`.
 
 ### Screen: Routines
 Route: `/routines` · Purpose: Routinen + Streaks · Layout: nach Tageszeit gruppiert, Streak-Anzeige + Archiv-Bereich · Components: `checkbox`, `streak-indicator`, `card`.
@@ -458,7 +446,7 @@ Route: `/routines` · Purpose: Routinen + Streaks · Layout: nach Tageszeit grup
 Route: `/journal` · Purpose: Reflexions-Feed · Layout: chronologischer Feed mit Foto-Thumbnails · Components: `card`, `image-thumb`, `button-mic`.
 
 ### Screen: Settings
-Route: `/settings` · Purpose: API-Tokens, Google-Calendar-Verbindung, Zeitzone, Integrations-Status · Components: `card`, `button-primary`, `status-badge`, `code-block` (Token-Anzeige einmalig).
+Route: `/settings/*` (Unterseiten mit In-Page-Tabs: Integrationen · Tokens · Insights · Erinnerungen · Areas) · Purpose: Integrations-Status inkl. Kalender-Mehrfachauswahl, API-Tokens, Capture-Metriken, Journal-Erinnerungs-Status, Areas-Verwaltung · Components: `card`, `button-primary`, `status-badge`, `code-block` (Token-Anzeige einmalig), `tabs`, `checkbox` (Kalenderauswahl).
 
 ### Screen: Login
 Route: `/login` · Purpose: Supabase Auth · States: Idle · Submitting · Error · Components: `input-text`, `button-primary`.
@@ -494,9 +482,7 @@ Entfällt — Atlas ist ein kostenloses Single-User-Tool ohne Zahlungsabwicklung
 ### Feature: Capture
 | Scenario | Expected Behavior | Priority |
 |---|---|---|
-| Anthropic-API down/timeout | Rohtext bleibt als Notiz in Inbox (status=failed), Response 207, kein Verlust | P0 |
 | Ungültiges/leeres Diktat | 400 mit klarer Meldung, kein Insert | P0 |
-| Klassifikation wählt nicht-existente Area | Fallback „unzugeordnet", Eintrag trotzdem erstellt | P1 |
 | Rate-Limit überschritten | 429, Shortcut zeigt knappe Fehlermeldung | P1 |
 | Ungültiges/abgelaufenes Token | 401, Hinweis Token neu erzeugen | P0 |
 
@@ -511,6 +497,7 @@ Entfällt — Atlas ist ein kostenloses Single-User-Tool ohne Zahlungsabwicklung
 |---|---|---|
 | Google Calendar nicht verbunden/Fehler | Kalenderbereich zeigt Hinweis, Rest funktioniert | P1 |
 | Calendar-Sync-Cron schlägt fehl | Letzter Cache bleibt sichtbar, Stale-Hinweis | P2 |
+| Keine Kalender-Auswahl gespeichert | Fallback auf `primary` | P2 |
 
 ### Feature: Routines
 | Scenario | Expected Behavior | Priority |
