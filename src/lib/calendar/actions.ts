@@ -87,10 +87,11 @@ export async function listAvailableCalendars(): Promise<AvailableCalendar[]> {
 /** Persist the calendar selection and re-sync immediately so it's visible right away. */
 export async function updateSelectedCalendars(ids: string[]): Promise<void> {
   const { supabase, userId } = await requireUser();
+  const normalized = ids.length > 0 ? ids : ["primary"];
   await supabase
     .from("calendar_sync_state")
     .upsert(
-      { user_id: userId, selected_calendar_ids: ids },
+      { user_id: userId, selected_calendar_ids: normalized },
       { onConflict: "user_id" },
     );
   try {
