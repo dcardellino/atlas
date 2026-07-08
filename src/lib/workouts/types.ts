@@ -134,7 +134,6 @@ export type WorkoutSet = {
   duration_seconds: number | null;
   calories: number | null;
   rpe: number | null;
-  is_warmup: boolean;
   created_at: string;
 };
 
@@ -158,7 +157,6 @@ export type TemplateSet = {
   distance_m?: number | null;
   duration_seconds?: number | null;
   calories?: number | null;
-  is_warmup?: boolean;
 };
 
 /** Ein Block innerhalb einer Vorlage — Modus + Config, ohne Ergebnisse. */
@@ -192,7 +190,6 @@ export type SetInput = {
   duration_seconds?: number | null;
   calories?: number | null;
   rpe?: number | null;
-  is_warmup?: boolean;
 };
 
 export type BlockInput = {

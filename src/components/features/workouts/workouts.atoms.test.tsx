@@ -83,7 +83,6 @@ describe("SetRow", () => {
 
     expect(screen.getByText("Wdh.")).toBeInTheDocument();
     expect(screen.getByText("kg")).toBeInTheDocument();
-    expect(screen.getByText("Aufwärmen")).toBeInTheDocument();
   });
 
   it("renders only the specified metrics", () => {

@@ -17,7 +17,6 @@ function makeSet(partial: Partial<WorkoutSet>): WorkoutSet {
     duration_seconds: null,
     calories: null,
     rpe: null,
-    is_warmup: false,
     created_at: "2026-07-06T00:00:00Z",
     ...partial,
   };

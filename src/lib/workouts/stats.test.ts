@@ -19,7 +19,6 @@ function set(partial: Partial<StatSet>): StatSet {
     weight_kg: null,
     distance_m: null,
     duration_seconds: null,
-    is_warmup: false,
     ...partial,
   };
 }
@@ -99,11 +98,10 @@ describe("exerciseProgression", () => {
     { id: "w2", performed_on: "2026-07-08", type: "strength" },
   ];
 
-  it("tracks max weight and best est-1RM per date, ignoring warmups and other exercises", () => {
+  it("tracks max weight and best est-1RM per date, ignoring other exercises", () => {
     const sets: StatSet[] = [
       set({ workout_id: "w1", exercise_name: "Kniebeuge", reps: 5, weight_kg: 100 }),
       set({ workout_id: "w1", exercise_name: "Kniebeuge", reps: 3, weight_kg: 110 }),
-      set({ workout_id: "w1", exercise_name: "Kniebeuge", reps: 12, weight_kg: 60, is_warmup: true }),
       set({ workout_id: "w1", exercise_name: "Bankdrücken", reps: 5, weight_kg: 80 }),
       set({ workout_id: "w2", exercise_name: "Kniebeuge", reps: 5, weight_kg: 105 }),
     ];
