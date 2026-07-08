@@ -25,7 +25,9 @@ dictates on-device and sends the text, authenticated, to `/api/capture`.
      - `text` = (variable) **Dictated Text**
      - `source` = `ios_shortcut`
 4. Add the **"Get Dictionary Value"** action:
-   - Key `title` from **Contents of URL** (for the confirmation).
+   - Key `title` from **Contents of URL** (for the confirmation). Note: `title`
+     is now the raw dictated text verbatim (AI title-cleanup was removed) —
+     the confirmation will read back exactly what you said.
 5. Add the **"Show Notification"** action:
    - Text: e.g. `Captured: ` + **Dictionary Value**.
 6. Name the shortcut (e.g. "Capture to Atlas") and add it to the Home Screen or
@@ -43,9 +45,8 @@ Content-Type: application/json
 
 Responses:
 
-- `201` — captured: `{ "type", "id", "title", "area": { "id", "name" } | null, "due_at" }`
-- `207` — AI classification failed; stored as a note in the inbox (no data
-  loss): `{ "type": "note", "id", "note": "unklassifiziert, in Inbox" }`
+- `201` — captured as an inbox note: `{ "type": "note", "id", "title" }`
+  (`title` is the raw dictated text — there is no AI classification anymore).
 - `401` — token invalid/expired → create a new one in Settings.
 - `429` — rate limit (60/min) reached → wait briefly.
 
