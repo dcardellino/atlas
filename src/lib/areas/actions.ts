@@ -76,7 +76,7 @@ export async function create(input: {
     .single();
   if (error || !data)
     throw new Error(error?.message ?? "could not create area");
-  revalidatePath("/areas");
+  revalidatePath("/settings/areas");
   revalidatePath("/today");
   return data as Area;
 }
@@ -87,7 +87,7 @@ export async function update(
 ): Promise<void> {
   const { supabase, userId } = await requireUser();
   await supabase.from("areas").update(patch).eq("id", id).eq("user_id", userId);
-  revalidatePath("/areas");
+  revalidatePath("/settings/areas");
   revalidatePath("/today");
 }
 
@@ -103,7 +103,7 @@ export async function reorder(orderedIds: string[]): Promise<void> {
         .eq("user_id", userId),
     ),
   );
-  revalidatePath("/areas");
+  revalidatePath("/settings/areas");
   revalidatePath("/today");
 }
 
@@ -115,7 +115,7 @@ export async function reorder(orderedIds: string[]): Promise<void> {
 export async function remove(id: string): Promise<void> {
   const { supabase, userId } = await requireUser();
   await supabase.from("areas").delete().eq("id", id).eq("user_id", userId);
-  revalidatePath("/areas");
+  revalidatePath("/settings/areas");
   revalidatePath("/tasks");
   revalidatePath("/routines");
   revalidatePath("/today");
@@ -170,7 +170,7 @@ export async function reassignOrphan(
     .update({ area_id: areaId })
     .eq("id", id)
     .eq("user_id", userId);
-  revalidatePath("/areas");
+  revalidatePath("/settings/areas");
   revalidatePath("/tasks");
   revalidatePath("/routines");
   revalidatePath("/today");
