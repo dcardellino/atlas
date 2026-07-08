@@ -22,6 +22,7 @@ export type CalendarSyncState = {
   user_id: string;
   last_synced_at: string | null;
   last_error: string | null;
+  selected_calendar_ids: string[] | null;
 };
 
 /** What the Today view needs to render the calendar section + stale/error hint. */
