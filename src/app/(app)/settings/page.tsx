@@ -1,48 +1,5 @@
-import TokenManager from "@/components/features/settings/TokenManager";
-import IntegrationStatus from "@/components/features/settings/IntegrationStatus";
-import MetricsPanel from "@/components/features/settings/MetricsPanel";
-import { listTokens } from "@/lib/auth/actions";
-import { getSyncState } from "@/lib/calendar/actions";
-import { metricsSummary } from "@/lib/metrics/summary";
-import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
 
-// Settings entry point (TASK-016, TASK-046). Token management (Phase 1) plus the
-// integrations status — Supabase / Calendar / Telegram badges, timezone, last
-// sync and a force-sync button (Phase 3, FR-010).
-export default async function SettingsPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const [tokens, syncState, metrics] = await Promise.all([
-    listTokens(),
-    getSyncState(),
-    metricsSummary(),
-  ]);
-
-  return (
-    <section>
-      <p className="font-mono text-label uppercase tracking-label text-on-surface-muted">
-        Einstellungen
-      </p>
-      <h1 className="mt-1 font-serif text-display text-on-surface">Settings</h1>
-      <MetricsPanel data={metrics} />
-      <TokenManager initialTokens={tokens} />
-      <IntegrationStatus
-        data={{
-          supabaseConnected: Boolean(user),
-          calendar: {
-            connected: syncState?.last_synced_at != null,
-            lastSyncedAt: syncState?.last_synced_at ?? null,
-            error: syncState?.last_error ?? null,
-          },
-          telegramConfigured: Boolean(
-            process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID,
-          ),
-          timezone: process.env.CAPTURE_TZ ?? "Europe/Berlin",
-        }}
-      />
-    </section>
-  );
+export default function SettingsPage() {
+  redirect("/settings/integrations");
 }

@@ -41,9 +41,6 @@ function seconds(ms: number | null): string {
 export default function MetricsPanel({ data }: { data: MetricsSummary }) {
   return (
     <section className="mt-8">
-      <p className="font-mono text-label uppercase tracking-label text-on-surface-muted">
-        Insights
-      </p>
       <p className="mt-1 font-mono text-meta uppercase tracking-label text-on-surface-muted">
         Letzte {data.windowDays} Tage
       </p>

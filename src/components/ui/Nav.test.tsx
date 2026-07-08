@@ -28,7 +28,6 @@ describe("Nav", () => {
       "Today",
       "Tasks",
       "Training",
-      "Areas",
       "Routines",
       "Journal",
       "Settings",

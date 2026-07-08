@@ -75,10 +75,6 @@ export default function IntegrationStatus({
 
   return (
     <section className="mt-8">
-      <p className="font-mono text-label uppercase tracking-label text-on-surface-muted">
-        Integrationen
-      </p>
-
       <ul className="mt-3">
         <Row name="Supabase">
           <StatusBadge
