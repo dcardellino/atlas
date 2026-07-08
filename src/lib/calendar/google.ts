@@ -9,8 +9,13 @@ import "server-only";
  */
 
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
-const EVENTS_URL =
-  "https://www.googleapis.com/calendar/v3/calendars/primary/events";
+
+function eventsUrl(calendarId: string): string {
+  return `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`;
+}
+
+const CALENDAR_LIST_URL =
+  "https://www.googleapis.com/calendar/v3/users/me/calendarList";
 
 export type GoogleEvent = {
   id?: string;
@@ -65,14 +70,15 @@ export async function getAccessToken(
   return json.access_token;
 }
 
-/** List primary-calendar events within [timeMin, timeMax), expanded to instances. */
+/** List a calendar's events within [timeMin, timeMax), expanded to instances. */
 export async function fetchEvents(
   accessToken: string,
+  calendarId: string,
   timeMin: string,
   timeMax: string,
   fetchImpl: typeof fetch = fetch,
 ): Promise<GoogleEvent[]> {
-  const url = new URL(EVENTS_URL);
+  const url = new URL(eventsUrl(calendarId));
   url.searchParams.set("timeMin", timeMin);
   url.searchParams.set("timeMax", timeMax);
   url.searchParams.set("singleEvents", "true");
@@ -87,8 +93,11 @@ export async function fetchEvents(
   return json.items ?? [];
 }
 
-/** Normalise a Google event to a cache row. Returns null if unusable/cancelled. */
-export function normalizeEvent(e: GoogleEvent): NormalizedEvent | null {
+/** Normalise a Google event to a cache row, tagged with its source calendar. Returns null if unusable/cancelled. */
+export function normalizeEvent(
+  e: GoogleEvent,
+  calendarId: string,
+): NormalizedEvent | null {
   if (e.status === "cancelled" || !e.id) return null;
 
   const allDay = Boolean(e.start?.date && !e.start?.dateTime);
@@ -102,7 +111,7 @@ export function normalizeEvent(e: GoogleEvent): NormalizedEvent | null {
 
   return {
     external_id: e.id,
-    calendar_id: "primary",
+    calendar_id: calendarId,
     summary: e.summary ?? null,
     description: e.description ?? null,
     location: e.location ?? null,
@@ -112,4 +121,27 @@ export function normalizeEvent(e: GoogleEvent): NormalizedEvent | null {
     html_link: e.htmlLink ?? null,
     updated_at: e.updated ?? null,
   };
+}
+
+export type GoogleCalendarListEntry = {
+  id?: string;
+  summary?: string;
+  primary?: boolean;
+};
+
+/** List the calendars the connected Google account has access to. */
+export async function fetchCalendarList(
+  accessToken: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<{ id: string; summary: string; primary?: boolean }[]> {
+  const res = await fetchImpl(CALENDAR_LIST_URL, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) throw new Error(`calendar list fetch failed: ${res.status}`);
+  const json = (await res.json()) as { items?: GoogleCalendarListEntry[] };
+  return (json.items ?? [])
+    .filter((c): c is { id: string; summary?: string; primary?: boolean } =>
+      Boolean(c.id),
+    )
+    .map((c) => ({ id: c.id, summary: c.summary ?? c.id, primary: c.primary }));
 }
