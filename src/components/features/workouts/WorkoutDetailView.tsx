@@ -136,11 +136,6 @@ export default function WorkoutDetailView({
                         {si + 1}
                       </span>
                       {s.exercise_name}
-                      {s.is_warmup && (
-                        <span className="ml-2 font-mono text-meta uppercase tracking-label text-on-surface-muted">
-                          Aufw.
-                        </span>
-                      )}
                     </span>
                     <span className="shrink-0 text-body-sm text-on-surface-muted">
                       {setSummary(s)}

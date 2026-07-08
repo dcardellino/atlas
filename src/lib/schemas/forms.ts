@@ -130,7 +130,6 @@ const TemplateSetSchema = z.object({
   distance_m: z.number().int().nullable().optional(),
   duration_seconds: z.number().int().nullable().optional(),
   calories: z.number().int().nullable().optional(),
-  is_warmup: z.boolean().optional(),
 });
 
 const TemplateBlockSchema = z.object({
