@@ -24,7 +24,6 @@ import type { TodaySummary, RecentInboxItem } from "@/lib/today/summary";
 import { WORKOUT_TYPE_LABEL } from "@/lib/workouts/types";
 import type { CalendarEvent, CalendarState } from "@/lib/calendar/types";
 import EmptyState from "@/components/ui/EmptyState";
-import Reclassify from "@/components/features/capture/Reclassify";
 
 /**
  * Today-View UI (TASK-021). Sections: Top-3, heute fällig, kürzlich erfasst.
@@ -199,13 +198,7 @@ function CalendarNotice({ state }: { state: CalendarState }) {
   return null;
 }
 
-function RecentRow({
-  item,
-  areas,
-}: {
-  item: RecentInboxItem;
-  areas: AreaOption[];
-}) {
+function RecentRow({ item }: { item: RecentInboxItem }) {
   return (
     <li className="flex items-center gap-3 border-b border-border py-3">
       <span className="flex-1 truncate text-body-sm text-on-surface-muted">
@@ -214,7 +207,6 @@ function RecentRow({
       <span className="font-mono text-meta uppercase tracking-label text-on-surface-muted">
         {item.status === "failed" ? "inbox" : (item.classified_type ?? "")}
       </span>
-      <Reclassify item={item} areas={areas} />
     </li>
   );
 }
@@ -333,7 +325,7 @@ export default function TodayView({
           {data.recentInbox.length > 0 && (
             <Section title="Kürzlich erfasst">
               {data.recentInbox.map((i) => (
-                <RecentRow key={i.id} item={i} areas={areas} />
+                <RecentRow key={i.id} item={i} />
               ))}
             </Section>
           )}
