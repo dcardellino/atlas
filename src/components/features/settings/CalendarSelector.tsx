@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   updateSelectedCalendars,
   type AvailableCalendar,
@@ -14,6 +15,7 @@ export default function CalendarSelector({
   calendars: AvailableCalendar[];
   initialSelected: string[];
 }) {
+  const router = useRouter();
   const [selected, setSelected] = useState<string[]>(initialSelected);
   const [pending, startTransition] = useTransition();
   const { show: showToast } = useToast();
@@ -27,6 +29,7 @@ export default function CalendarSelector({
   function onSave() {
     startTransition(async () => {
       await updateSelectedCalendars(selected);
+      router.refresh();
       showToast("Kalenderauswahl gespeichert");
     });
   }
