@@ -4,7 +4,7 @@ const mocks = vi.hoisted(() => ({ createClient: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: mocks.createClient }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
-import { create, toggleComplete, list, remove } from "./actions";
+import { create, toggleComplete, list, remove, getLastReminderSentAt } from "./actions";
 
 /**
  * Builds a chainable Supabase mock. `singleData` is what `.single()` resolves to;
@@ -117,5 +117,24 @@ describe("tasks actions (TASK-018)", () => {
       recurrence: "daily",
       due_at: "2026-07-02T06:00:00.000Z",
     });
+  });
+});
+
+describe("getLastReminderSentAt", () => {
+  it("returns the most recently sent reminder timestamp", async () => {
+    const { client } = makeClient({
+      listData: [
+        { reminder_sent_at: "2026-07-08T09:00:00.000Z" },
+        { reminder_sent_at: "2026-07-01T09:00:00.000Z" },
+      ],
+    });
+    mocks.createClient.mockResolvedValue(client);
+    expect(await getLastReminderSentAt()).toBe("2026-07-08T09:00:00.000Z");
+  });
+
+  it("returns null when no reminder has ever been sent", async () => {
+    const { client } = makeClient({ listData: [] });
+    mocks.createClient.mockResolvedValue(client);
+    expect(await getLastReminderSentAt()).toBeNull();
   });
 });

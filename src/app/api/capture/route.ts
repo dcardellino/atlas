@@ -1,21 +1,16 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { formatInTimeZone } from "date-fns-tz";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { bearerFromHeader, resolveToken } from "@/lib/auth/token";
 import { CaptureInputSchema } from "@/lib/schemas/capture";
-import { classify, CLASSIFY_MODEL, type AreaContext } from "@/lib/ai/classify";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
- * Capture endpoint (TASK-014 / FR-001, latency logging TASK-024).
+ * Capture endpoint (TASK-014 / FR-001).
  *
- * The magic moment: raw text in → classified entry out, in under 5s. Order is
- * chosen so a classifier failure can never lose data (PRD § Reliability):
- *   1. persist inbox_item (status=pending) with the raw text
- *   2. classify
- *   3. create the target entry (task | journal; note stays as the inbox item)
- *   4. mark the inbox_item classified (or failed → 207 note fallback)
+ * Raw text in → inbox note out. No AI classification (removed) — every
+ * capture is persisted as a plain note; task/journal/routine entries are
+ * created manually via their own pages.
  *
  * Auth: a Supabase session (PWA) OR a Bearer token (iOS shortcut). Session
  * inserts run under RLS; token inserts use the admin client with an explicit
@@ -41,22 +36,6 @@ function rateLimited(userId: string, now: number): boolean {
   recent.push(now);
   hits.set(userId, recent);
   return recent.length > RATE_LIMIT;
-}
-
-const CAPTURE_TZ = process.env.CAPTURE_TZ ?? "Europe/Berlin";
-
-/**
- * Derive a routine's time-of-day grouping from a captured due time, if any.
- * Routines usually carry no time → "anytime" (TASK-035).
- */
-function routineTiming(dueAt: string | null | undefined): {
-  time_of_day: "morning" | "afternoon" | "evening" | "anytime";
-} {
-  if (!dueAt) return { time_of_day: "anytime" };
-  const hour = Number(formatInTimeZone(new Date(dueAt), CAPTURE_TZ, "H"));
-  const time_of_day =
-    hour < 12 ? "morning" : hour < 17 ? "afternoon" : "evening";
-  return { time_of_day };
 }
 
 async function authenticate(request: NextRequest): Promise<AuthOutcome> {
@@ -130,10 +109,17 @@ export async function POST(request: NextRequest) {
   const { text, source } = parsed.data;
   const { userId, db } = auth;
 
-  // 1. Persist the raw capture first — never lose data.
+  // 1. Persist the capture as a plain inbox note. No classification step —
+  // every capture is a note (AI classification removed).
   const { data: inbox, error: inboxError } = await db
     .from("inbox_items")
-    .insert({ user_id: userId, raw_text: text, source, status: "pending" })
+    .insert({
+      user_id: userId,
+      raw_text: text,
+      source,
+      status: "classified",
+      classified_type: "note",
+    })
     .select("id")
     .single();
 
@@ -144,153 +130,8 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // 2. Load the user's areas as classification context.
-  const { data: areaRows } = await db
-    .from("areas")
-    .select("id, slug, name")
-    .eq("user_id", userId);
-  const areas: AreaContext[] = (areaRows ?? []).map((a) => ({
-    slug: a.slug,
-    name: a.name,
-  }));
-
-  // 3. Classify. On any failure, fall back to keeping the capture as a note.
-  let classification;
-  let classifyMs: number;
-  try {
-    const t0 = Date.now();
-    classification = await classify(text, areas);
-    classifyMs = Date.now() - t0;
-  } catch (err) {
-    await db
-      .from("inbox_items")
-      .update({
-        status: "failed",
-        classified_type: "note",
-        ai_meta: {
-          model: CLASSIFY_MODEL,
-          error: err instanceof Error ? err.message : String(err),
-          total_ms: Date.now() - startedAt,
-        },
-      })
-      .eq("id", inbox.id);
-
-    return NextResponse.json(
-      { type: "note", id: inbox.id, note: "unklassifiziert, in Inbox" },
-      { status: 207 },
-    );
-  }
-
-  const areaRow = classification.area_slug
-    ? (areaRows ?? []).find((a) => a.slug === classification.area_slug)
-    : undefined;
-  const areaId = areaRow?.id ?? null;
-
-  // 4. Create the target entry. task → tasks, routine → routines (TASK-035),
-  // journal → journal_entries; 'note' stays as the inbox item itself.
-  let createdId = inbox.id;
-  let targetError: string | null = null;
-
-  if (classification.type === "task") {
-    const { data: task, error } = await db
-      .from("tasks")
-      .insert({
-        user_id: userId,
-        area_id: areaId,
-        title: classification.title,
-        due_at: classification.due_at ?? null,
-        source_inbox_id: inbox.id,
-      })
-      .select("id")
-      .single();
-    if (task) createdId = task.id;
-    else targetError = error?.message ?? "task insert failed";
-  } else if (classification.type === "routine") {
-    // `routines` has no source_inbox_id; the inbox item's classified_into below
-    // preserves the link back to this routine.
-    const { time_of_day } = routineTiming(classification.due_at);
-    const { data: routine, error } = await db
-      .from("routines")
-      .insert({
-        user_id: userId,
-        area_id: areaId,
-        name: classification.title,
-        time_of_day,
-      })
-      .select("id")
-      .single();
-    if (routine) createdId = routine.id;
-    else targetError = error?.message ?? "routine insert failed";
-  } else if (classification.type === "journal") {
-    const { data: entry, error } = await db
-      .from("journal_entries")
-      .insert({
-        user_id: userId,
-        area_id: areaId,
-        body: text,
-        source,
-        source_inbox_id: inbox.id,
-      })
-      .select("id")
-      .single();
-    if (entry) createdId = entry.id;
-    else targetError = error?.message ?? "journal insert failed";
-  }
-  // 'note' → no separate row; the inbox_item itself is the note.
-
-  // 4b. If the target row could not be created, don't pretend success (which
-  // previously returned a 201 pointing at the inbox id). Keep the raw text as an
-  // inbox note (no data loss) and report 207 so the client can flag it.
-  if (targetError) {
-    await db
-      .from("inbox_items")
-      .update({
-        status: "failed",
-        classified_type: "note",
-        ai_meta: {
-          model: CLASSIFY_MODEL,
-          classification,
-          classify_ms: classifyMs,
-          error: targetError,
-          total_ms: Date.now() - startedAt,
-        },
-      })
-      .eq("id", inbox.id);
-
-    return NextResponse.json(
-      { type: "note", id: inbox.id, note: "konnte nicht einsortiert werden, in Inbox" },
-      { status: 207 },
-    );
-  }
-
-  // 5. Mark the inbox item classified, with timings (TASK-024).
-  const { error: updateError } = await db
-    .from("inbox_items")
-    .update({
-      status: "classified",
-      classified_type: classification.type,
-      classified_into: createdId,
-      ai_meta: {
-        model: CLASSIFY_MODEL,
-        classification,
-        classify_ms: classifyMs,
-        total_ms: Date.now() - startedAt,
-      },
-    })
-    .eq("id", inbox.id);
-  // The target row exists; a failed bookkeeping update is non-fatal but logged.
-  if (updateError) {
-    console.error("capture: inbox update failed", updateError.message);
-  }
-
   return NextResponse.json(
-    {
-      type: classification.type,
-      id: createdId,
-      title: classification.title,
-      area: areaRow ? { id: areaRow.id, name: areaRow.name } : null,
-      due_at: classification.due_at ?? null,
-    },
+    { type: "note", id: inbox.id, title: text },
     { status: 201 },
   );
 }

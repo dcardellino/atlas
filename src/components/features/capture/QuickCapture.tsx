@@ -10,13 +10,6 @@ import { useToast } from "@/components/ui/Toast";
  * Hype). Mounted app-wide in the (app) layout.
  */
 
-type CaptureResult = {
-  type?: string;
-  title?: string;
-  area?: { id: string; name: string } | null;
-  note?: string;
-};
-
 // Minimal Web Speech API surface (not in lib.dom types).
 type SpeechRecognitionLike = {
   lang: string;
@@ -117,20 +110,14 @@ export default function QuickCapture() {
           source: usedVoice.current ? "pwa_voice" : "pwa_text",
         }),
       });
-      const data: CaptureResult = await res.json();
-      if (!res.ok && res.status !== 207) {
+      if (!res.ok) {
         setError("Konnte nicht erfassen — kurz prüfen?");
         setPending(false);
         return;
       }
-      const area = data.area?.name ? ` — Bereich ${data.area.name}` : "";
-      const label =
-        data.type === "note" || res.status === 207
-          ? "In Inbox abgelegt"
-          : `Erfasst${area}`;
       usedVoice.current = false;
       close();
-      showToast(label);
+      showToast("In Inbox abgelegt");
     } catch {
       setError("Konnte nicht erfassen — kurz prüfen?");
     } finally {

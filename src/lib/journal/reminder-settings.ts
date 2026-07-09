@@ -58,5 +58,5 @@ export async function updateReminderSettings(
     { user_id: userId, ...patch, updated_at: new Date().toISOString() },
     { onConflict: "user_id" },
   );
-  revalidatePath("/settings");
+  revalidatePath("/settings/reminders");
 }

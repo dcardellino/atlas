@@ -63,10 +63,6 @@ export default function TokenManager({
 
   return (
     <section className="mt-8">
-      <p className="font-mono text-label uppercase tracking-label text-on-surface-muted">
-        Shortcut-Tokens
-      </p>
-
       <div className="mt-3 flex items-end gap-3">
         <label className="flex-1">
           <span className="font-mono text-label uppercase tracking-label text-on-surface-muted">

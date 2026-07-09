@@ -1,6 +1,6 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getAccessToken, fetchEvents, normalizeEvent } from "./google";
+import { getAccessToken, fetchEvents, normalizeEvent, type NormalizedEvent } from "./google";
 
 /**
  * Sync a user's primary Google Calendar into the read-only cache (TASK-044,
@@ -24,17 +24,31 @@ export async function syncCalendarForUser(
   const syncedAt = now.toISOString();
 
   try {
+    const { data: state } = await db
+      .from("calendar_sync_state")
+      .select("selected_calendar_ids")
+      .eq("user_id", userId)
+      .maybeSingle();
+    const calendarIds: string[] = state?.selected_calendar_ids?.length
+      ? state.selected_calendar_ids
+      : ["primary"];
+
     const token = await getAccessToken(process.env, fetchImpl);
-    const events = await fetchEvents(token, timeMin, timeMax, fetchImpl);
-    const rows = events
-      .map(normalizeEvent)
-      .filter((e): e is NonNullable<typeof e> => e !== null)
-      .map((e) => ({ ...e, user_id: userId, synced_at: syncedAt }));
+    const rows: (NormalizedEvent & { user_id: string; synced_at: string })[] = [];
+    for (const calendarId of calendarIds) {
+      const events = await fetchEvents(token, calendarId, timeMin, timeMax, fetchImpl);
+      for (const e of events) {
+        const normalized = normalizeEvent(e, calendarId);
+        if (normalized) {
+          rows.push({ ...normalized, user_id: userId, synced_at: syncedAt });
+        }
+      }
+    }
 
     if (rows.length > 0) {
       await db
         .from("calendar_events")
-        .upsert(rows, { onConflict: "user_id,external_id" });
+        .upsert(rows, { onConflict: "user_id,calendar_id,external_id" });
     }
 
     // Any row not refreshed this run fell out of the window / was deleted.

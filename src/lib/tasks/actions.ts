@@ -184,3 +184,15 @@ export async function remove(id: string): Promise<void> {
   revalidatePath("/tasks");
   revalidatePath("/today");
 }
+
+/** Most recent `reminder_sent_at` across the user's tasks, or null if none was ever sent. */
+export async function getLastReminderSentAt(): Promise<string | null> {
+  const { supabase, userId } = await requireUser();
+  const { data } = await supabase
+    .from("tasks")
+    .select("reminder_sent_at")
+    .eq("user_id", userId)
+    .order("reminder_sent_at", { ascending: false, nullsFirst: false });
+  const rows = (data as { reminder_sent_at: string | null }[]) ?? [];
+  return rows[0]?.reminder_sent_at ?? null;
+}

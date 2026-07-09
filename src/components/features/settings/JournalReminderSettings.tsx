@@ -10,8 +10,7 @@ import { useToast } from "@/components/ui/Toast";
 
 /**
  * Settings section for the Morning Setup / Evening Close Telegram reminders —
- * on/off + time per reminder. First editable settings form in the app (the
- * existing sections are read-only status displays).
+ * on/off + time per reminder.
  */
 
 function Row({
@@ -68,11 +67,7 @@ export default function JournalReminderSettings({
 
   return (
     <section className="mt-8">
-      <p className="font-mono text-label uppercase tracking-label text-on-surface-muted">
-        Journal-Erinnerungen
-      </p>
-
-      <ul className="mt-3">
+      <ul>
         <Row
           label="Morning Setup"
           enabled={settings.morning_enabled}

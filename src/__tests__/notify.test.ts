@@ -64,12 +64,15 @@ describe("sendTelegram (TASK-041)", () => {
 
 describe("normalizeEvent (TASK-044)", () => {
   it("maps a timed event", () => {
-    const n = normalizeEvent({
-      id: "e1",
-      summary: "Meeting",
-      start: { dateTime: "2026-07-01T09:00:00Z" },
-      end: { dateTime: "2026-07-01T10:00:00Z" },
-    });
+    const n = normalizeEvent(
+      {
+        id: "e1",
+        summary: "Meeting",
+        start: { dateTime: "2026-07-01T09:00:00Z" },
+        end: { dateTime: "2026-07-01T10:00:00Z" },
+      },
+      "primary",
+    );
     expect(n).toMatchObject({
       external_id: "e1",
       summary: "Meeting",
@@ -79,14 +82,20 @@ describe("normalizeEvent (TASK-044)", () => {
   });
 
   it("flags an all-day (date-only) event", () => {
-    const n = normalizeEvent({ id: "e2", start: { date: "2026-07-02" }, end: { date: "2026-07-03" } });
+    const n = normalizeEvent(
+      { id: "e2", start: { date: "2026-07-02" }, end: { date: "2026-07-03" } },
+      "primary",
+    );
     expect(n?.all_day).toBe(true);
     expect(n?.start_at).toBe("2026-07-02T00:00:00.000Z");
   });
 
   it("drops cancelled events", () => {
     expect(
-      normalizeEvent({ id: "e3", status: "cancelled", start: { dateTime: "2026-07-01T11:00:00Z" } }),
+      normalizeEvent(
+        { id: "e3", status: "cancelled", start: { dateTime: "2026-07-01T11:00:00Z" } },
+        "primary",
+      ),
     ).toBeNull();
   });
 });
@@ -100,6 +109,7 @@ function makeCalendarDb() {
     b.select = chain;
     b.eq = chain;
     b.lt = chain;
+    b.maybeSingle = async () => ({ data: null, error: null });
     b.upsert = (values: unknown, options: unknown) => {
       upserts.push({ table, values, options });
       return b;
@@ -155,7 +165,7 @@ describe("syncCalendarForUser (TASK-044)", () => {
 
     const eventsUpsert = upserts.find((u) => u.table === "calendar_events");
     expect((eventsUpsert?.values as unknown[]).length).toBe(2);
-    expect(eventsUpsert?.options).toMatchObject({ onConflict: "user_id,external_id" });
+    expect(eventsUpsert?.options).toMatchObject({ onConflict: "user_id,calendar_id,external_id" });
     expect(deleteCalls).toContain("calendar_events");
 
     const stateUpsert = upserts.find((u) => u.table === "calendar_sync_state");

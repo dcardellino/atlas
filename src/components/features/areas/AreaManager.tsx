@@ -323,15 +323,7 @@ export default function AreaManager({
 
   return (
     <section>
-      <div className="flex items-end justify-between">
-        <div>
-          <p className="font-mono text-label uppercase tracking-label text-on-surface-muted">
-            Lebensbereiche
-          </p>
-          <h1 className="mt-1 font-serif text-display text-on-surface">
-            Areas
-          </h1>
-        </div>
+      <div className="flex justify-end">
         <button
           type="button"
           onClick={() => setCreating(true)}

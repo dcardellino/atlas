@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { dayBoundsUtc } from "@/lib/time/day";
+import { getAccessToken, fetchCalendarList } from "./google";
 import { syncCalendarForUser } from "./sync";
 import type { CalendarEvent, CalendarSyncState } from "./types";
 
@@ -64,5 +65,40 @@ export async function forceSync(): Promise<void> {
     // last_error is already persisted by syncCalendarForUser.
   }
   revalidatePath("/settings");
+  revalidatePath("/today");
+}
+
+export type AvailableCalendar = { id: string; summary: string; primary?: boolean };
+
+/**
+ * Calendars the connected Google account has, for the Settings selector. Never
+ * throws — an unconfigured/broken connection just yields an empty list (the UI
+ * hides the selector when this is empty).
+ */
+export async function listAvailableCalendars(): Promise<AvailableCalendar[]> {
+  try {
+    const token = await getAccessToken();
+    return await fetchCalendarList(token);
+  } catch {
+    return [];
+  }
+}
+
+/** Persist the calendar selection and re-sync immediately so it's visible right away. */
+export async function updateSelectedCalendars(ids: string[]): Promise<void> {
+  const { supabase, userId } = await requireUser();
+  const normalized = ids.length > 0 ? ids : ["primary"];
+  await supabase
+    .from("calendar_sync_state")
+    .upsert(
+      { user_id: userId, selected_calendar_ids: normalized },
+      { onConflict: "user_id" },
+    );
+  try {
+    await syncCalendarForUser(createAdminClient(), userId);
+  } catch {
+    // last_error is already persisted by syncCalendarForUser.
+  }
+  revalidatePath("/settings/integrations");
   revalidatePath("/today");
 }

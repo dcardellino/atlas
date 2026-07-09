@@ -7,10 +7,7 @@ import { dayBoundsUtc } from "@/lib/time/day";
  * user, returning a typed summary. Everything is derived from `inbox_items`:
  *
  *  - daily capture count (today + recent daily average) — primary metric
- *  - AI correction rate — corrected ÷ classified (the corrected_* columns from 0007)
  *  - voice:text ratio — from `source`
- *  - capture p95 latency — percentile over `ai_meta.total_ms`, computed in JS
- *    (Supabase JS has no percentile aggregate)
  *  - failure rate — status = 'failed'
  *
  * Single-user scale: reads a bounded recent window (default 30 days).
@@ -26,13 +23,8 @@ export type MetricsSummary = {
   voiceCaptures: number;
   textCaptures: number;
   voiceSharePct: number | null;
-  classifiedCount: number;
-  correctedCount: number;
-  correctionRatePct: number | null;
   failureCount: number;
   failureRatePct: number | null;
-  captureP95Ms: number | null;
-  sampleSize: number;
 };
 
 const VOICE_SOURCES = new Set(["pwa_voice", "ios_shortcut"]);
@@ -40,19 +32,9 @@ const VOICE_SOURCES = new Set(["pwa_voice", "ios_shortcut"]);
 type InboxRow = {
   source: string | null;
   status: string | null;
-  corrected_at: string | null;
   created_at: string;
-  ai_meta: { total_ms?: number } | null;
 };
 
-/** p95 of a numeric sample (nearest-rank), or null when empty. */
-export function percentile(values: number[], p: number): number | null {
-  if (values.length === 0) return null;
-  const sorted = [...values].sort((a, b) => a - b);
-  const rank = Math.ceil((p / 100) * sorted.length);
-  const idx = Math.min(sorted.length - 1, Math.max(0, rank - 1));
-  return sorted[idx];
-}
 
 const EMPTY: MetricsSummary = {
   windowDays: WINDOW_DAYS,
@@ -62,13 +44,8 @@ const EMPTY: MetricsSummary = {
   voiceCaptures: 0,
   textCaptures: 0,
   voiceSharePct: null,
-  classifiedCount: 0,
-  correctedCount: 0,
-  correctionRatePct: null,
   failureCount: 0,
   failureRatePct: null,
-  captureP95Ms: null,
-  sampleSize: 0,
 };
 
 export async function metricsSummary(
@@ -88,7 +65,7 @@ export async function metricsSummary(
 
   const { data } = await supabase
     .from("inbox_items")
-    .select("source, status, corrected_at, created_at, ai_meta")
+    .select("source, status, created_at")
     .eq("user_id", user.id)
     .gte("created_at", windowStart);
 
@@ -98,20 +75,13 @@ export async function metricsSummary(
   let capturesToday = 0;
   let voiceCaptures = 0;
   let textCaptures = 0;
-  let classifiedCount = 0;
-  let correctedCount = 0;
   let failureCount = 0;
-  const latencies: number[] = [];
 
   for (const r of rows) {
     if (r.created_at >= todayStart && r.created_at < todayEnd) capturesToday++;
     if (r.source && VOICE_SOURCES.has(r.source)) voiceCaptures++;
     else if (r.source === "pwa_text") textCaptures++;
-    if (r.status === "classified") classifiedCount++;
     if (r.status === "failed") failureCount++;
-    if (r.corrected_at) correctedCount++;
-    const ms = r.ai_meta?.total_ms;
-    if (typeof ms === "number" && ms > 0) latencies.push(ms);
   }
 
   const voiceText = voiceCaptures + textCaptures;
@@ -125,12 +95,7 @@ export async function metricsSummary(
     voiceCaptures,
     textCaptures,
     voiceSharePct: pct(voiceCaptures, voiceText),
-    classifiedCount,
-    correctedCount,
-    correctionRatePct: pct(correctedCount, classifiedCount),
     failureCount,
     failureRatePct: pct(failureCount, rows.length),
-    captureP95Ms: percentile(latencies, 95),
-    sampleSize: latencies.length,
   };
 }
