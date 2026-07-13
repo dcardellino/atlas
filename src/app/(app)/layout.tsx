@@ -1,4 +1,5 @@
 import Nav from "@/components/ui/Nav";
+import PullToRefresh from "@/components/ui/PullToRefresh";
 import QuickCapture from "@/components/features/capture/QuickCapture";
 import { ToastProvider } from "@/components/ui/Toast";
 import { seedDefaultAreas } from "@/lib/areas/seed";
@@ -18,7 +19,7 @@ export default async function AppLayout({
     <ToastProvider>
       <div className="flex min-h-dvh flex-col bg-surface text-on-surface">
         <main className="mx-auto w-full max-w-2xl flex-1 px-5 py-6">
-          {children}
+          <PullToRefresh>{children}</PullToRefresh>
         </main>
         <Nav />
         {/* App-wide quick capture overlay; opens with Cmd/Ctrl+J (TASK-019). */}
