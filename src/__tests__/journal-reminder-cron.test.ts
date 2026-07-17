@@ -34,19 +34,32 @@ type FakeRow = {
   evening_last_sent_on: string | null;
 };
 
-function makeSettingsClient(rows: FakeRow[]) {
-  const updates: { table: string; values: unknown; col: string; val: string }[] = [];
+/**
+ * Table-aware fake client. `journal_reminder_settings` yields the settings rows;
+ * `areas` yields the data owners the cron enumerates (defaulting to the owners of
+ * the given settings rows). Upserts are captured for assertions.
+ */
+function makeSettingsClient(
+  rows: FakeRow[],
+  ownerIds?: string[],
+) {
+  const owners = (ownerIds ?? [...new Set(rows.map((r) => r.user_id))]).map(
+    (user_id) => ({ user_id }),
+  );
+  const upserts: { table: string; values: Record<string, unknown> }[] = [];
   return {
-    updates,
+    upserts,
     client: {
       from: (table: string) => ({
-        select: () => Promise.resolve({ data: rows, error: null }),
-        update: (values: Record<string, unknown>) => ({
-          eq: (col: string, val: string) => {
-            updates.push({ table, values, col, val });
-            return Promise.resolve({ data: null, error: null });
-          },
-        }),
+        select: () =>
+          Promise.resolve({
+            data: table === "areas" ? owners : rows,
+            error: null,
+          }),
+        upsert: (values: Record<string, unknown>) => {
+          upserts.push({ table, values });
+          return Promise.resolve({ data: null, error: null });
+        },
       }),
     },
   };
@@ -57,7 +70,7 @@ describe("runJournalReminders", () => {
 
   it("sends the morning push and stamps last_sent_on when due", async () => {
     mocks.sendTelegram.mockResolvedValue(true);
-    const { client, updates } = makeSettingsClient([
+    const { client, upserts } = makeSettingsClient([
       {
         user_id: "u1",
         morning_enabled: true,
@@ -74,18 +87,16 @@ describe("runJournalReminders", () => {
 
     expect(result.sent).toBe(1);
     expect(mocks.sendTelegram).toHaveBeenCalledTimes(1);
-    expect(updates).toContainEqual(
-      expect.objectContaining({
-        col: "user_id",
-        val: "u1",
-        values: { morning_last_sent_on: "2026-07-06" },
-      }),
-    );
+    // Row already exists → the upsert touches only the stamp, not the saved values.
+    expect(upserts).toContainEqual({
+      table: "journal_reminder_settings",
+      values: { user_id: "u1", morning_last_sent_on: "2026-07-06" },
+    });
   });
 
   it("skips a user whose reminder already fired today", async () => {
     mocks.sendTelegram.mockResolvedValue(true);
-    const { client, updates } = makeSettingsClient([
+    const { client, upserts } = makeSettingsClient([
       {
         user_id: "u1",
         morning_enabled: true,
@@ -101,12 +112,12 @@ describe("runJournalReminders", () => {
 
     expect(result.sent).toBe(0);
     expect(mocks.sendTelegram).not.toHaveBeenCalled();
-    expect(updates).toHaveLength(0);
+    expect(upserts).toHaveLength(0);
   });
 
   it("does not stamp last_sent_on when the Telegram push fails", async () => {
     mocks.sendTelegram.mockResolvedValue(false);
-    const { client, updates } = makeSettingsClient([
+    const { client, upserts } = makeSettingsClient([
       {
         user_id: "u1",
         morning_enabled: true,
@@ -121,6 +132,36 @@ describe("runJournalReminders", () => {
     const result = await runJournalReminders(client as never, new Date("2026-07-06T05:30:00Z"));
 
     expect(result.sent).toBe(0);
-    expect(updates).toHaveLength(0);
+    expect(upserts).toHaveLength(0);
+  });
+
+  it("applies defaults for a data-owning user with no settings row", async () => {
+    mocks.sendTelegram.mockResolvedValue(true);
+    // No settings rows, but u1 owns data (areas). Defaults: morning 07:00 on,
+    // evening 21:00 on.
+    const { client, upserts } = makeSettingsClient([], ["u1"]);
+
+    // 20:00 UTC = 22:00 CEST — past both the 07:00 and 21:00 default thresholds.
+    const result = await runJournalReminders(client as never, new Date("2026-07-06T20:00:00Z"));
+
+    expect(result.sent).toBe(2);
+    expect(mocks.sendTelegram).toHaveBeenCalledTimes(2);
+    // First push lazily creates the row with the default settings + the stamp.
+    expect(upserts[0]).toEqual({
+      table: "journal_reminder_settings",
+      values: {
+        user_id: "u1",
+        morning_enabled: true,
+        morning_time: "07:00",
+        evening_enabled: true,
+        evening_time: "21:00",
+        morning_last_sent_on: "2026-07-06",
+      },
+    });
+    // Row now exists → the evening upsert only touches its stamp.
+    expect(upserts[1]).toEqual({
+      table: "journal_reminder_settings",
+      values: { user_id: "u1", evening_last_sent_on: "2026-07-06" },
+    });
   });
 });

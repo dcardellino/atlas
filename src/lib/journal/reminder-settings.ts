@@ -2,27 +2,17 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { DEFAULTS, type ReminderSettings } from "./reminder-defaults";
 
 /**
  * Journal reminder settings — one row per user, read/written under the session
  * client (RLS). Powers the Settings UI. The cron route reads the same table
  * through the admin client instead (see reminder-cron.ts), so it isn't scoped
- * to a logged-in session.
+ * to a logged-in session. Defaults live in reminder-defaults.ts, shared with the
+ * cron so the "on by default" the UI shows is exactly what the cron sends.
  */
 
-export type ReminderSettings = {
-  morning_enabled: boolean;
-  morning_time: string;
-  evening_enabled: boolean;
-  evening_time: string;
-};
-
-const DEFAULTS: ReminderSettings = {
-  morning_enabled: true,
-  morning_time: "07:00",
-  evening_enabled: true,
-  evening_time: "21:00",
-};
+export type { ReminderSettings };
 
 async function requireUser() {
   const supabase = await createClient();
